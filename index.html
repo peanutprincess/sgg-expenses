@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SGG Expenses</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f0f5;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .card {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 20px;
+      padding: 24px 20px 28px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111;
+      margin-bottom: 20px;
+      letter-spacing: -0.3px;
+    }
+
+    /* ── Drop Zone ── */
+    .drop-zone {
+      border: 2px dashed #d1d5db;
+      border-radius: 14px;
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      background: #fafafa;
+      margin-bottom: 18px;
+      position: relative;
+    }
+    .drop-zone.drag-over { border-color: #4f8ef7; background: #eef4ff; }
+    .drop-zone.has-file  { border-color: #22c55e; background: #f0fdf4; border-style: solid; }
+    .dz-icon  { font-size: 36px; line-height: 1; margin-bottom: 8px; }
+    .dz-label { font-size: 14px; color: #6b7280; }
+    .dz-name  { font-size: 14px; font-weight: 600; color: #16a34a; margin-top: 6px; word-break: break-all; }
+    #fileInput { display: none; }
+
+    /* ── Location Buttons ── */
+    .loc-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+    .loc-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .loc-btn {
+      padding: 14px 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .loc-btn:active { transform: scale(0.97); }
+    .loc-btn.sel-nyc { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+    .loc-btn.sel-la  { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 5px;
+    }
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 11px;
+      font-size: 16px;
+      color: #111;
+      background: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus,
+    .field select:focus { border-color: #3b82f6; }
+    .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+
+    /* ── Submit ── */
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      letter-spacing: 0.2px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+    .submit-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* ── States ── */
+    .error-msg {
+      color: #ef4444;
+      font-size: 13px;
+      margin-bottom: 10px;
+      display: none;
+      padding: 10px 12px;
+      background: #fef2f2;
+      border-radius: 8px;
+    }
+
+    #loading-state, #success-state { display: none; text-align: center; padding: 30px 16px; }
+    .load-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #111;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-state p { color: #6b7280; font-size: 14px; }
+    .success-icon { font-size: 52px; margin-bottom: 12px; }
+    .success-title { font-size: 20px; font-weight: 700; color: #16a34a; margin-bottom: 6px; }
+    .success-detail { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
+    .success-link { display: inline-block; font-size: 13px; font-weight: 600; color: #3b82f6; margin-bottom: 20px; text-decoration: none; }
+    .again-btn {
+      padding: 13px 28px;
+      background: #f3f4f6;
+      border: none;
+      border-radius: 11px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #111;
+    }
+    .again-btn:active { background: #e5e7eb; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>💸 Add Expense</h1>
+
+  <!-- FORM STATE -->
+  <div id="form-state">
+    <div class="drop-zone" id="dropZone">
+      <div class="dz-icon" id="dzIcon">📎</div>
+      <div class="dz-label" id="dzLabel">Drop receipt here<br>or tap to upload</div>
+      <div class="dz-name" id="dzName"></div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,.pdf" capture="environment">
+
+    <div class="loc-label">Location *</div>
+    <div class="loc-row">
+      <button class="loc-btn" id="btn-nyc" onclick="setLoc('NYC')">🗽 NYC</button>
+      <button class="loc-btn" id="btn-la"  onclick="setLoc('LA')">🌴 LA</button>
+    </div>
+
+    <div class="field">
+      <label>Date *</label>
+      <input type="date" id="date">
+    </div>
+    <div class="field">
+      <label>Vendor</label>
+      <input type="text" id="vendor" placeholder="e.g. Adobe, ADT Security">
+    </div>
+    <div class="field">
+      <label>Amount ($)</label>
+      <input type="number" id="amount" inputmode="decimal" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="category">
+        <option value="">Select…</option>
+        <option>Advertising</option>
+        <option>Art Handling</option>
+        <option>Bennet Expense</option>
+        <option>Cleaning</option>
+        <option>Construction</option>
+        <option>Framing</option>
+        <option>General Operation Expense</option>
+        <option>Materials</option>
+        <option>Office Supplies</option>
+        <option>Opening Expenses</option>
+        <option>Photo</option>
+        <option>Production</option>
+        <option>Publishing</option>
+        <option>Security</option>
+        <option>Shipping</option>
+        <option>Show Expense</option>
+        <option>Software</option>
+        <option>Storage</option>
+        <option>Taxes</option>
+        <option>Utilities</option>
+        <option>Vehicle Rental</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Account</label>
+      <select id="account">
+        <option value="">Select…</option>
+        <option>AmEx 1034 - Gold</option>
+        <option>AmEx 1016 _ Plat</option>
+        <option>Amex 1004</option>
+        <option>AmEx 7399</option>
+        <option>AMEX****3252</option>
+        <option>Checking 5560- NY</option>
+        <option>Checking 7129- LA</option>
+        <option>MasterCard9059</option>
+        <option>Visa 6251</option>
+        <option>CC 0129</option>
+        <option>Card 2002</option>
+        <option>Zelle</option>
+        <option>Cash</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Note</label>
+      <input type="text" id="note" placeholder="Optional note">
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Save Expense →</button>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div id="loading-state">
+    <div class="load-spinner"></div>
+    <p>Saving receipt &amp; updating sheet…</p>
+  </div>
+
+  <!-- SUCCESS STATE -->
+  <div id="success-state">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Expense saved!</div>
+    <div class="success-detail" id="successDetail"></div>
+    <a class="success-link" id="successLink" href="#" target="_blank">View receipt in Drive ↗</a><br>
+    <button class="again-btn" onclick="reset()">+ Add Another</button>
+  </div>
+</div>
+
+<script>
+  let file = null;
+  let loc  = null;
+
+  // Auto-fill today's date
+  (function() {
+    const d  = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById('date').value = d.getFullYear() + '-' + mm + '-' + dd;
+  })();
+
+  // ── File handling ──
+  const dropZone  = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave',   () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+
+  function setFile(f) {
+    file = f;
+    dropZone.classList.add('has-file');
+    document.getElementById('dzIcon').textContent  = '📄';
+    document.getElementById('dzLabel').textContent = 'Receipt attached';
+    document.getElementById('dzName').textContent  = f.name;
+  }
+
+  // ── Location ──
+  function setLoc(l) {
+    loc = l;
+    document.getElementById('btn-nyc').className = 'loc-btn' + (l === 'NYC' ? ' sel-nyc' : '');
+    document.getElementById('btn-la').className  = 'loc-btn' + (l === 'LA'  ? ' sel-la'  : '');
+  }
+
+  // ── Submit ──
+  function handleSubmit() {
+    hideError();
+    if (!file) { showError('Please attach a receipt first.'); return; }
+    if (!loc)  { showError('Please choose a location (NYC or LA).'); return; }
+    if (!document.getElementById('date').value) { showError('Date is required.'); return; }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const b64 = e.target.result.split(',')[1];
+      const payload = {
+        fileData: b64,
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        location: loc,
+        date:     document.getElementById('date').value,
+        vendor:   document.getElementById('vendor').value.trim(),
+        amount:   document.getElementById('amount').value,
+        category: document.getElementById('category').value,
+        account:  document.getElementById('account').value,
+        note:     document.getElementById('note').value.trim(),
+      };
+      show('loading-state');
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onError)
+        .submitExpense(payload);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function onSuccess(res) {
+    if (res.success) {
+      document.getElementById('successDetail').textContent =
+        'Filed in: ' + res.folder;
+      document.getElementById('successLink').href = res.fileUrl;
+      show('success-state');
+    } else {
+      show('form-state');
+      showError(res.error || 'Something went wrong.');
+    }
+  }
+
+  function onError(err) {
+    show('form-state');
+    showError(err.message || 'Unexpected error. Please try again.');
+  }
+
+  // ── Helpers ──
+  function show(id) {
+    ['form-state','loading-state','success-state'].forEach(s =>
+      document.getElementById(s).style.display = s === id ? 'block' : 'none');
+  }
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideError() {
+    document.getElementById('errorMsg').style.display = 'none';
+  }
+
+  function reset() {
+    file = null; loc = null;
+    document.getElementById('dropZone').className = 'drop-zone';
+    document.getElementById('dzIcon').textContent  = '📎';
+    document.getElementById('dzLabel').innerHTML   = 'Drop receipt here<br>or tap to upload';
+    document.getElementById('dzName').textContent  = '';
+    document.getElementById('vendor').value   = '';
+    document.getElementById('amount').value   = '';
+    document.getElementById('category').value = '';
+    document.getElementById('account').value  = '';
+    document.getElementById('note').value     = '';
+    document.getElementById('btn-nyc').className = 'loc-btn';
+    document.getElementById('btn-la').className  = 'loc-btn';
+    const d  = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById('date').value = d.getFullYear() + '-' + mm + '-' + dd;
+    show('form-state');
+  }
+</script>
+</body>
+</html>
