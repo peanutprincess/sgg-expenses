@@ -282,6 +282,35 @@
     .ops-col-body.la-tint  .cal-overlay { background: rgba(234, 179, 8, 0.12); }
     .ops-col-header.nyc-hdr { border-bottom-color: rgba(234, 88, 12, 0.7); color: rgba(234, 88, 12, 0.85); }
     .ops-col-header.la-hdr  { border-bottom-color: rgba(180, 140, 0, 0.7); color: rgba(160, 120, 0, 0.85); }
+
+    /* ── Condition Reports ── */
+    .cr-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+    .cr-photo-slot {
+      aspect-ratio: 1; border: 2px dashed #e5e7eb; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; overflow: hidden; background: #f9fafb;
+    }
+    .cr-photo-slot.has-photo { border-color: #6366f1; border-style: solid; }
+    .cr-photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; border-radius: 10px; }
+    .cr-slot-label { font-size: 10px; font-weight: 600; color: #6b7280; text-align: center; line-height: 1.3; padding: 0 4px; z-index: 1; }
+    .cr-slot-icon { font-size: 18px; margin-bottom: 3px; z-index: 1; }
+    .cr-slot-file { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2; }
+    .cr-cond-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .cr-cond-btn {
+      flex: 1; padding: 10px 4px; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; color: #374151;
+      font-family: inherit; text-align: center; -webkit-tap-highlight-color: transparent;
+    }
+    .cr-cond-btn.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+    .cr-textarea {
+      width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 11px;
+      font-size: 16px; color: #111; background: #fff; outline: none; resize: none;
+      font-family: inherit;
+    }
+    .cr-section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #9ca3af; margin: 18px 0 10px;
+    }
   </style>
 </head>
 <body>
@@ -735,6 +764,62 @@
   </div>
 </div>
 
+<!-- Condition Reports View -->
+<div id="view-cr" class="view">
+  <div class="card">
+    <h1>📋 Condition Report</h1>
+
+    <div id="cr-form-state">
+      <div class="field"><label>Stock #</label><input type="text" id="cr-stock" placeholder="e.g. GVR038" autocomplete="off"></div>
+      <div class="field"><label>Artist</label><input type="text" id="cr-artist" placeholder="Artist name" autocomplete="off"></div>
+      <div class="field"><label>Title</label><input type="text" id="cr-title" placeholder="Artwork title" autocomplete="off"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field"><label>Year</label><input type="text" id="cr-year" placeholder="2025" autocomplete="off"></div>
+        <div class="field"><label>Date In</label><input type="date" id="cr-date-in"></div>
+      </div>
+      <div class="field"><label>Medium</label><input type="text" id="cr-medium" placeholder="Oil on canvas…" autocomplete="off"></div>
+      <div class="field"><label>Dimensions</label><input type="text" id="cr-dims" placeholder='32" H x 31" W' autocomplete="off"></div>
+      <div class="field"><label>Date Out <span style="color:#9ca3af;font-weight:400;">(optional)</span></label><input type="date" id="cr-date-out"></div>
+
+      <div class="field">
+        <label>General Condition</label>
+        <div class="cr-cond-row" style="margin-top:8px;">
+          <button type="button" class="cr-cond-btn" onclick="crSetCond(this,'Excellent')">Excellent</button>
+          <button type="button" class="cr-cond-btn" onclick="crSetCond(this,'Good')">Good</button>
+          <button type="button" class="cr-cond-btn" onclick="crSetCond(this,'Fair')">Fair</button>
+          <button type="button" class="cr-cond-btn" onclick="crSetCond(this,'Poor')">Poor</button>
+        </div>
+      </div>
+
+      <div class="field"><label>Comments <span style="color:#9ca3af;font-weight:400;">(optional)</span></label><textarea id="cr-comments" class="cr-textarea" rows="2" placeholder="General condition notes…"></textarea></div>
+      <div class="field"><label>Inscription <span style="color:#9ca3af;font-weight:400;">(optional)</span></label><textarea id="cr-inscription" class="cr-textarea" rows="2" placeholder="e.g. Signed verso"></textarea></div>
+      <div class="field"><label>Frame / Framing <span style="color:#9ca3af;font-weight:400;">(optional)</span></label><textarea id="cr-frame" class="cr-textarea" rows="2" placeholder="e.g. Unframed"></textarea></div>
+
+      <div class="cr-section-label">Photographs</div>
+      <div class="cr-photo-grid" id="cr-photo-grid"></div>
+
+      <div class="field"><label>Signed By</label><input type="text" id="cr-signed-by" placeholder="Name" autocomplete="off"></div>
+      <div class="field"><label>Signature Date</label><input type="date" id="cr-sig-date"></div>
+
+      <div id="cr-error" class="error-msg" style="display:none;margin-bottom:12px;"></div>
+      <button class="submit-btn" onclick="crSubmitMobile()">Generate Condition Report →</button>
+    </div>
+
+    <div id="cr-loading-state" style="display:none;text-align:center;padding:50px 0;">
+      <div style="font-size:32px;margin-bottom:12px;">📋</div>
+      <p id="cr-loading-msg" style="color:#6b7280;font-size:15px;">Uploading photos…</p>
+    </div>
+
+    <div id="cr-success-state" style="display:none;text-align:center;padding:40px 0;">
+      <div style="font-size:44px;margin-bottom:12px;">✅</div>
+      <p style="font-weight:700;font-size:18px;margin-bottom:6px;">CR Generated</p>
+      <p id="cr-success-detail" style="color:#6b7280;font-size:14px;margin-bottom:20px;"></p>
+      <a id="cr-pdf-link" href="#" target="_blank" style="display:inline-block;background:#6366f1;color:#fff;font-weight:700;font-size:14px;padding:12px 28px;border-radius:12px;text-decoration:none;margin-bottom:16px;">Open CR in Drive ↗</a><br>
+      <button class="submit-btn" style="margin-top:8px;" onclick="crResetMobile()">New Report</button>
+    </div>
+  </div>
+</div>
+
 <!-- Tab Bar -->
 <div class="tab-bar">
   <div class="tab-item active" id="tab-expenses" onclick="switchTab('expenses')">
@@ -772,6 +857,13 @@
       <path d="M12 6.75A8.25 8.25 0 0118 4.5c1.046 0 2.057.18 3 .512V19.5A8.25 8.25 0 0018 19a8.25 8.25 0 00-5.697 2.272A.75.75 0 0112 21V6.75z"/>
     </svg>
     Books
+  </div>
+  <div class="tab-item" id="tab-cr" onclick="switchTab('cr')">
+    <svg class="tab-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 12h6M9 16h6M13 4H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V9l-5-5z"/>
+      <path d="M13 4v5h5"/>
+    </svg>
+    CR
   </div>
 </div>
 
@@ -1177,6 +1269,239 @@
   function bookShowState(id) {
     ['book-form-state','book-loading-state','book-success-state'].forEach(s =>
       document.getElementById(s).style.display = s===id ? 'block' : 'none');
+  }
+
+  // ── Condition Reports (Mobile) ─────────────────────────────────────────────
+  let crCondition = null;
+  const crPhotos  = {};
+  const CR_SLOTS  = [
+    { key: 'thumbnail',     label: 'Artwork\nThumb' },
+    { key: 'front',         label: 'Front' },
+    { key: 'back',          label: 'Back' },
+    { key: 'top-left',      label: 'Top Left' },
+    { key: 'top-right',     label: 'Top Right' },
+    { key: 'bottom-left',   label: 'Bot Left' },
+    { key: 'bottom-right',  label: 'Bot Right' },
+    { key: 'detail-1',      label: 'Detail 1' },
+    { key: 'detail-2',      label: 'Detail 2' },
+  ];
+
+  // Build photo grid + set today's dates
+  (function initCR() {
+    const grid = document.getElementById('cr-photo-grid');
+    CR_SLOTS.forEach(slot => {
+      const d = document.createElement('div');
+      d.className = 'cr-photo-slot';
+      d.id = 'cr-slot-' + slot.key;
+      d.innerHTML =
+        '<span class="cr-slot-icon">📷</span>' +
+        '<span class="cr-slot-label">' + slot.label.replace('\n','<br>') + '</span>' +
+        '<input type="file" accept="image/*" capture="environment" class="cr-slot-file">';
+      d.querySelector('input').addEventListener('change', function() { crHandlePhoto(slot.key, this); });
+      grid.appendChild(d);
+    });
+    const today = new Date();
+    const v = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    document.getElementById('cr-date-in').value  = v;
+    document.getElementById('cr-sig-date').value = v;
+  })();
+
+  function crSetCond(btn, val) {
+    crCondition = val;
+    document.querySelectorAll('.cr-cond-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+
+  function crHandlePhoto(key, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      crPhotos[key] = { base64: e.target.result.split(',')[1], mimeType: file.type || 'image/jpeg', dataUrl: e.target.result };
+      const slot = document.getElementById('cr-slot-' + key);
+      slot.classList.add('has-photo');
+      let img = slot.querySelector('img');
+      if (!img) { img = document.createElement('img'); slot.insertBefore(img, slot.querySelector('.cr-slot-file')); }
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function crShowState(id) {
+    ['cr-form-state','cr-loading-state','cr-success-state'].forEach(s =>
+      document.getElementById(s).style.display = s === id ? 'block' : 'none');
+  }
+
+  function crShowError(msg) {
+    const el = document.getElementById('cr-error');
+    el.textContent = msg; el.style.display = 'block';
+  }
+
+  let html2pdfReady = false;
+  function loadHtml2Pdf() {
+    if (html2pdfReady || window.html2pdf) { html2pdfReady = true; return Promise.resolve(); }
+    return new Promise(function(resolve, reject) {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+      s.onload = function() { html2pdfReady = true; resolve(); };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  function buildCRHtmlMobile(data, photoUrls) {
+    const conditionLabels = ['Excellent','Good','Fair','Poor'];
+    const condBoxes = conditionLabels.map(l =>
+      '<span style="margin-right:16px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
+    ).join('');
+    const thumbData = crPhotos['thumbnail'];
+    const thumbHtml = thumbData
+      ? '<img src="' + thumbData.dataUrl + '" style="max-width:90px;max-height:90px;object-fit:contain;float:right;margin-left:12px;">'
+      : '';
+    const photoSlots = ['front','back','top-left','top-right','bottom-left','bottom-right','detail-1','detail-2'];
+    const photoLabels = { 'front':'Front','back':'Back','top-left':'Top-Left Corner','top-right':'Top-Right Corner','bottom-left':'Bottom-Left Corner','bottom-right':'Bottom-Right Corner','detail-1':'Detail 1','detail-2':'Detail 2' };
+    const cells = photoSlots.map(function(key) {
+      const p = crPhotos[key]; const url = photoUrls && photoUrls[key];
+      if (!p) return '';
+      const img = '<img src="' + p.dataUrl + '" style="width:100%;height:100px;object-fit:cover;display:block;">';
+      const link = url ? '<a href="' + url + '" style="display:block;">' + img + '</a>' : img;
+      return '<div>' + link + '<div style="font-size:10px;color:#555;text-align:center;margin-top:3px;">' + (photoLabels[key]||key) + '</div></div>';
+    }).filter(Boolean);
+    const photosGrid = cells.length
+      ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">' + cells.join('') + '</div>'
+      : '<div style="color:#aaa;font-size:12px;">No photographs attached</div>';
+    const svgW=520,svgH=240,cols=12,rows=10,cx=svgW/2,cy=svgH/2,rx=255,ry=110;
+    let gl='';
+    for(let c=0;c<=cols;c++){const x=c*(svgW/cols);gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="#ccc" stroke-width="0.5"/>';}
+    for(let r=0;r<=rows;r++){const y=r*(svgH/rows);gl+='<line x1="0" y1="'+y+'" x2="'+svgW+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
+    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="none" stroke="#888" stroke-width="1.5"/></svg>';
+    const fr = function(label,val){ return '<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;"><div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">'+label+'</div><div style="flex:1;font-size:12px;color:#111;">'+(val||'')+'</div></div>'; };
+    const hr = '<hr style="border:none;border-top:1px solid #ccc;margin:12px 0;">';
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;}</style></head><body>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'
+      +'<div style="font-size:15px;font-weight:700;">Sebastian Gladstone</div>'
+      +'<div style="font-size:12px;text-align:right;line-height:1.8;"><div><span style="color:#777;">Date in:</span> '+(data.dateIn||'')+'</div><div><span style="color:#777;">Date out:</span> '+(data.dateOut||'')+'</div></div>'
+      +'</div>'+hr
+      +fr('Stock number', data.stockNum)
+      +'<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;">'
+      +'<div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">Artwork</div>'
+      +'<div style="flex:1;font-size:12px;color:#111;"><strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'<br>'+(data.medium||'')+'<br>'+(data.dims||'')+'</div>'
+      +thumbHtml+'</div>'+hr
+      +fr('General condition', condBoxes)
+      +fr('Comments', (data.comments||'').replace(/\n/g,'<br>'))
+      +fr('Inscription information', (data.inscription||'').replace(/\n/g,'<br>'))
+      +fr('Frame condition and dimensions', (data.frame||'').replace(/\n/g,'<br>'))
+      +hr+'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Photographs</div>'
+      +photosGrid+hr
+      +'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Condition Diagram</div>'
+      +'<div style="display:flex;gap:14px;align-items:flex-start;">'
+      +'<div style="font-size:10px;color:#555;line-height:1.9;white-space:nowrap;"><div>&#9900; Chip &nbsp; &#10003; Dent &nbsp; &#8212; Scratches</div><div>&#9900; Scuffs &nbsp; //// Cracks &nbsp; = Part missing</div><div>&#8960; Stains &nbsp; &#215; Paint loss &nbsp; &#8743; Tear &nbsp; &#8745;&#8745; Crease</div></div>'
+      +'<div>'+svg+'</div></div>'+hr
+      +'<div style="display:flex;gap:48px;margin-top:8px;"><div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Signature</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.signedBy||'')+'</div></div>'
+      +'<div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Date</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.sigDate||'')+'</div></div></div>'
+      +'</body></html>';
+  }
+
+  async function crSubmitMobile() {
+    document.getElementById('cr-error').style.display = 'none';
+    const stockNum = document.getElementById('cr-stock').value.trim();
+    const artist   = document.getElementById('cr-artist').value.trim();
+    const title    = document.getElementById('cr-title').value.trim();
+    const dateIn   = document.getElementById('cr-date-in').value;
+    if (!stockNum)    { crShowError('Stock # is required.'); return; }
+    if (!artist)      { crShowError('Artist is required.'); return; }
+    if (!title)       { crShowError('Title is required.'); return; }
+    if (!crCondition) { crShowError('Please select a condition.'); return; }
+
+    crShowState('cr-loading-state');
+    document.getElementById('cr-loading-msg').textContent = 'Uploading photos…';
+
+    try {
+      // Step 1: Upload photos to Drive
+      const photosPayload = {};
+      Object.keys(crPhotos).forEach(function(k) {
+        photosPayload[k] = { fileData: crPhotos[k].base64, mimeType: crPhotos[k].mimeType };
+      });
+      let photoUrls = {};
+      if (Object.keys(photosPayload).length > 0) {
+        const r1 = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ type:'cr-photos', stockNum, photos: photosPayload }) });
+        const j1 = await r1.json();
+        if (j1.success) photoUrls = j1.photoUrls || {};
+      }
+
+      document.getElementById('cr-loading-msg').textContent = 'Generating PDF…';
+
+      // Step 2: Generate PDF client-side
+      await loadHtml2Pdf();
+      const formData = {
+        stockNum, artist, title, condition: crCondition, dateIn,
+        dateOut:     document.getElementById('cr-date-out').value,
+        year:        document.getElementById('cr-year').value.trim(),
+        medium:      document.getElementById('cr-medium').value.trim(),
+        dims:        document.getElementById('cr-dims').value.trim(),
+        comments:    document.getElementById('cr-comments').value.trim(),
+        inscription: document.getElementById('cr-inscription').value.trim(),
+        frame:       document.getElementById('cr-frame').value.trim(),
+        signedBy:    document.getElementById('cr-signed-by').value.trim(),
+        sigDate:     document.getElementById('cr-sig-date').value,
+      };
+      const html = buildCRHtmlMobile(formData, photoUrls);
+      const pdfBlob = await html2pdf().set({
+        margin: [0.75,0.75], filename: stockNum+'_CR.pdf',
+        image: { type:'jpeg', quality:0.82 },
+        html2canvas: { scale:1.5, useCORS:true, logging:false },
+        jsPDF: { unit:'in', format:'letter', orientation:'portrait' }
+      }).from(html).outputPdf('blob');
+
+      const pdfBase64 = await new Promise(function(resolve) {
+        const r = new FileReader();
+        r.onload = function(e) { resolve(e.target.result.split(',')[1]); };
+        r.readAsDataURL(pdfBlob);
+      });
+
+      document.getElementById('cr-loading-msg').textContent = 'Saving to Drive…';
+
+      // Step 3: Save PDF + log
+      const r2 = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({
+        type:'condition-report', stockNum, artist, title,
+        condition: crCondition, dateIn, dateOut: formData.dateOut,
+        signedBy: formData.signedBy, pdfData: pdfBase64
+      })});
+      const j2 = await r2.json();
+      if (!j2.success) throw new Error(j2.error || 'Save failed.');
+
+      document.getElementById('cr-success-detail').textContent = stockNum + ' — ' + artist + ' — ' + crCondition;
+      const lnk = document.getElementById('cr-pdf-link');
+      lnk.href = j2.pdfUrl || '#';
+      lnk.style.display = j2.pdfUrl ? 'inline-block' : 'none';
+      crShowState('cr-success-state');
+
+    } catch(err) {
+      crShowState('cr-form-state');
+      crShowError(err.message || 'Something went wrong.');
+    }
+  }
+
+  function crResetMobile() {
+    crCondition = null;
+    Object.keys(crPhotos).forEach(function(k) { delete crPhotos[k]; });
+    CR_SLOTS.forEach(function(slot) {
+      const el = document.getElementById('cr-slot-' + slot.key);
+      if (!el) return;
+      el.classList.remove('has-photo');
+      const img = el.querySelector('img'); if (img) img.remove();
+      const inp = el.querySelector('input'); if (inp) inp.value = '';
+    });
+    document.querySelectorAll('.cr-cond-btn').forEach(function(b) { b.classList.remove('selected'); });
+    ['cr-stock','cr-artist','cr-title','cr-year','cr-medium','cr-dims','cr-date-out','cr-comments','cr-inscription','cr-frame','cr-signed-by'].forEach(function(id) {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const today = new Date();
+    const v = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    document.getElementById('cr-date-in').value  = v;
+    document.getElementById('cr-sig-date').value = v;
+    document.getElementById('cr-error').style.display = 'none';
+    crShowState('cr-form-state');
   }
 
 </script>
