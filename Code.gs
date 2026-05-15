@@ -10,6 +10,10 @@ const BOOK_INVENTORY_SHEET = 'Book Inventory';
 const BOOK_LOG_SHEET       = 'Book Log';
 const BOOK_FOLDER_NAME     = 'Book Inventory';
 
+const GLOBAL_DATA_ID       = '';  // ← paste Global-Data spreadsheet ID here
+const RESELLER_CERT_SHEET  = 'Reseller Certificates';
+const CR_SHEET             = 'Condition Reports';
+
 // ─────────────────────────────────────────
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'gallery') {
@@ -72,9 +76,12 @@ function serveGalleryData(year) {
 function doPost(e) {
   try {
     const data   = JSON.parse(e.postData.contents);
-    const result = data.type === 'invoice'   ? submitInvoice(data)  :
-                   data.type === 'shipping'  ? submitShipping(data) :
-                   data.type === 'book_log'  ? submitBookLog(data)  :
+    const result = data.type === 'invoice'          ? submitInvoice(data)          :
+                   data.type === 'shipping'         ? submitShipping(data)         :
+                   data.type === 'book_log'         ? submitBookLog(data)          :
+                   data.type === 'reseller-cert'    ? submitResellerCert(data)     :
+                   data.type === 'cr-photos'        ? submitCRPhotos(data)         :
+                   data.type === 'condition-report' ? submitConditionReport(data)  :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -256,6 +263,131 @@ function buildShippingFileName(originalName, mimeType, artwork, date) {
   const ext = (mimeType || '').split('/')[1] || 'jpg';
   const art = (artwork || 'artwork').replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
   return art + '_' + date + '.' + ext;
+}
+
+// ─────────────────────────────────────────
+// RESELLER CERTIFICATES
+// Folder path: Root → Reseller Certificates
+// Sheet: "Reseller Certificates" in Global-Data (or SPREADSHEET_ID)
+// ─────────────────────────────────────────
+function submitResellerCert(data) {
+  try {
+    const token    = ScriptApp.getOAuthToken();
+    const folderId = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Reseller Certificates');
+
+    const safeClient = (data.clientName || 'Client').replace(/[^a-zA-Z0-9 _-]/g, '_');
+    const fileName   = safeClient + '_' + (data.date || '') + '.pdf';
+    const upload     = uploadFile(token, folderId, fileName, 'application/pdf', data.fileData);
+    const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
+    setPublicRead(token, upload.id);
+
+    const ssId   = GLOBAL_DATA_ID || SPREADSHEET_ID;
+    const ss     = SpreadsheetApp.openById(ssId);
+    let   sheet  = ss.getSheetByName(RESELLER_CERT_SHEET);
+    if (!sheet) {
+      sheet = ss.insertSheet(RESELLER_CERT_SHEET);
+      sheet.appendRow(['Date', 'Client', 'File']);
+      sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+
+    const displayDate = data.date ? fmtDate(data.date) : '';
+    sheet.appendRow([displayDate, data.clientName || '', fileName]);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 3).setFormula(
+      '=HYPERLINK("' + fileUrl.replace(/"/g,'""') + '","' + fileName.replace(/"/g,'""') + '")'
+    );
+
+    logToSheet('RESELLER-CERT OK: ' + (data.clientName || '?') + ' → ' + fileName);
+    return { success: true, fileUrl: fileUrl };
+
+  } catch (err) {
+    logToSheet('RESELLER-CERT ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+// ─────────────────────────────────────────
+// CONDITION REPORTS — step 1: upload photos
+// Folder path: Root → Condition Reports → stockNum
+// ─────────────────────────────────────────
+function submitCRPhotos(data) {
+  try {
+    const token     = ScriptApp.getOAuthToken();
+    const crRootId  = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Condition Reports');
+    const stockId   = findOrCreateFolder(token, crRootId, data.stockNum || 'Unknown');
+
+    const photoUrls = {};
+    const photos    = data.photos || {};
+    for (const label in photos) {
+      const photo    = photos[label];
+      if (!photo || !photo.fileData) continue;
+      const ext      = (photo.mimeType || 'image/jpeg').split('/')[1] || 'jpg';
+      const safeLbl  = label.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = (data.stockNum || 'CR') + '_' + safeLbl + '.' + ext;
+      const upload   = uploadFile(token, stockId, fileName, photo.mimeType, photo.fileData);
+      const fileUrl  = 'https://drive.google.com/file/d/' + upload.id + '/view';
+      setPublicRead(token, upload.id);
+      photoUrls[label] = fileUrl;
+    }
+
+    logToSheet('CR-PHOTOS OK: ' + (data.stockNum || '?') + ' — ' + Object.keys(photoUrls).length + ' photos');
+    return { success: true, photoUrls: photoUrls };
+
+  } catch (err) {
+    logToSheet('CR-PHOTOS ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+// ─────────────────────────────────────────
+// CONDITION REPORTS — step 2: upload PDF + log
+// Folder path: Root → Condition Reports (PDF goes here)
+// Sheet: "Condition Reports" in Global-Data (or SPREADSHEET_ID)
+// ─────────────────────────────────────────
+function submitConditionReport(data) {
+  try {
+    const token    = ScriptApp.getOAuthToken();
+    const crRootId = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Condition Reports');
+
+    const safeArtist = (data.artist || 'Artist').replace(/[^a-zA-Z0-9 _-]/g, '_');
+    const fileName   = (data.stockNum || 'CR') + '_' + safeArtist + '_CR_' + (data.dateIn || '') + '.pdf';
+    const upload     = uploadFile(token, crRootId, fileName, 'application/pdf', data.pdfData);
+    const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
+    setPublicRead(token, upload.id);
+
+    const ssId  = GLOBAL_DATA_ID || SPREADSHEET_ID;
+    const ss    = SpreadsheetApp.openById(ssId);
+    let   sheet = ss.getSheetByName(CR_SHEET);
+    if (!sheet) {
+      sheet = ss.insertSheet(CR_SHEET);
+      sheet.appendRow(['Date In', 'Stock #', 'Artist', 'Title', 'Condition', 'Signed By', 'CR Document']);
+      sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+      sheet.setFrozenRows(1);
+    }
+
+    const displayDate = data.dateIn ? fmtDate(data.dateIn) : '';
+    sheet.appendRow([
+      displayDate,
+      data.stockNum   || '',
+      data.artist     || '',
+      data.title      || '',
+      data.condition  || '',
+      data.signedBy   || '',
+      fileName
+    ]);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 7).setFormula(
+      '=HYPERLINK("' + fileUrl.replace(/"/g,'""') + '","' + fileName.replace(/"/g,'""') + '")'
+    );
+
+    logToSheet('CR OK: ' + (data.stockNum || '?') + ' ' + (data.artist || '?') + ' → ' + fileName);
+    return { success: true, pdfUrl: fileUrl };
+
+  } catch (err) {
+    logToSheet('CR ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
 }
 
 // ─────────────────────────────────────────
