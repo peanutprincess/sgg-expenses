@@ -10,37 +10,41 @@ const BOOK_INVENTORY_SHEET = 'Book Inventory';
 const BOOK_LOG_SHEET       = 'Book Log';
 const BOOK_FOLDER_NAME     = 'Book Inventory';
 
-// Auto-created spreadsheets (IDs cached in Script Properties on first use)
+// Tabs within the "Global-Data" spreadsheet
 const RESELLER_CERT_SHEET  = 'Reseller Certificates';
 const CR_SHEET             = 'Condition Reports';
 
-// Returns (and auto-creates if needed) a standalone spreadsheet for a given key.
-// The Drive folder for these sheets is the same G-Drive root as everything else.
-function getOrCreateStandaloneSheet(propKey, title, headers) {
+// Finds the "Global-Data" spreadsheet by name and caches its ID.
+function getGlobalDataSS() {
   const props = PropertiesService.getScriptProperties();
-  let ssId = props.getProperty(propKey);
-  let ss;
+  let ssId = props.getProperty('GLOBAL_DATA_SS_ID');
   if (ssId) {
-    try { ss = SpreadsheetApp.openById(ssId); } catch(e) { ssId = null; }
+    try { return SpreadsheetApp.openById(ssId); } catch(e) { /* stale, re-search */ }
   }
-  if (!ssId) {
-    ss    = SpreadsheetApp.create(title);
-    ssId  = ss.getId();
-    props.setProperty(propKey, ssId);
-    // Move into root folder
-    const token = ScriptApp.getOAuthToken();
-    UrlFetchApp.fetch(
-      'https://www.googleapis.com/drive/v3/files/' + ssId +
-      '?addParents=' + ROOT_FOLDER_ID + '&removeParents=root&fields=id',
-      { method: 'PATCH', headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
-    );
-    const sheet = ss.getActiveSheet();
-    sheet.setName(title);
+  const token = ScriptApp.getOAuthToken();
+  const q = "name='Global-Data' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
+  const resp  = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id)&pageSize=1',
+    { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
+  );
+  const files = JSON.parse(resp.getContentText()).files || [];
+  if (!files.length) throw new Error('Could not find a spreadsheet named "Global-Data" in Drive.');
+  ssId = files[0].id;
+  props.setProperty('GLOBAL_DATA_SS_ID', ssId);
+  return SpreadsheetApp.openById(ssId);
+}
+
+// Returns the named tab in Global-Data, creating it with headers if absent.
+function getGlobalDataSheet(tabName, headers) {
+  const ss = getGlobalDataSS();
+  let sheet = ss.getSheetByName(tabName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tabName);
     sheet.appendRow(headers);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f3f3f3');
     sheet.setFrozenRows(1);
   }
-  return ss;
+  return sheet;
 }
 
 // ─────────────────────────────────────────
@@ -310,8 +314,7 @@ function submitResellerCert(data) {
     const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
-    const ss    = getOrCreateStandaloneSheet('RESELLER_CERT_SS', 'SG Reseller Certificates', ['Date', 'Client', 'File']);
-    const sheet = ss.getSheetByName('SG Reseller Certificates') || ss.getSheets()[0];
+    const sheet = getGlobalDataSheet(RESELLER_CERT_SHEET, ['Date', 'Client', 'File']);
 
     const displayDate = data.date ? fmtDate(data.date) : '';
     sheet.appendRow([displayDate, data.clientName || '', fileName]);
@@ -378,8 +381,7 @@ function submitConditionReport(data) {
     const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
-    const ss    = getOrCreateStandaloneSheet('CR_SS', 'SG Condition Reports', ['Date In', 'Stock #', 'Artist', 'Title', 'Condition', 'Signed By', 'CR Document']);
-    const sheet = ss.getSheetByName('SG Condition Reports') || ss.getSheets()[0];
+    const sheet = getGlobalDataSheet(CR_SHEET, ['Date In', 'Stock #', 'Artist', 'Title', 'Condition', 'Signed By', 'CR Document']);
 
     const displayDate = data.dateIn ? fmtDate(data.dateIn) : '';
     sheet.appendRow([
