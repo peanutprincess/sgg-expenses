@@ -10,9 +10,38 @@ const BOOK_INVENTORY_SHEET = 'Book Inventory';
 const BOOK_LOG_SHEET       = 'Book Log';
 const BOOK_FOLDER_NAME     = 'Book Inventory';
 
-const GLOBAL_DATA_ID       = '';  // ← paste Global-Data spreadsheet ID here
+// Auto-created spreadsheets (IDs cached in Script Properties on first use)
 const RESELLER_CERT_SHEET  = 'Reseller Certificates';
 const CR_SHEET             = 'Condition Reports';
+
+// Returns (and auto-creates if needed) a standalone spreadsheet for a given key.
+// The Drive folder for these sheets is the same G-Drive root as everything else.
+function getOrCreateStandaloneSheet(propKey, title, headers) {
+  const props = PropertiesService.getScriptProperties();
+  let ssId = props.getProperty(propKey);
+  let ss;
+  if (ssId) {
+    try { ss = SpreadsheetApp.openById(ssId); } catch(e) { ssId = null; }
+  }
+  if (!ssId) {
+    ss    = SpreadsheetApp.create(title);
+    ssId  = ss.getId();
+    props.setProperty(propKey, ssId);
+    // Move into root folder
+    const token = ScriptApp.getOAuthToken();
+    UrlFetchApp.fetch(
+      'https://www.googleapis.com/drive/v3/files/' + ssId +
+      '?addParents=' + ROOT_FOLDER_ID + '&removeParents=root&fields=id',
+      { method: 'PATCH', headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
+    );
+    const sheet = ss.getActiveSheet();
+    sheet.setName(title);
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
+  }
+  return ss;
+}
 
 // ─────────────────────────────────────────
 function doGet(e) {
@@ -281,15 +310,8 @@ function submitResellerCert(data) {
     const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
-    const ssId   = GLOBAL_DATA_ID || SPREADSHEET_ID;
-    const ss     = SpreadsheetApp.openById(ssId);
-    let   sheet  = ss.getSheetByName(RESELLER_CERT_SHEET);
-    if (!sheet) {
-      sheet = ss.insertSheet(RESELLER_CERT_SHEET);
-      sheet.appendRow(['Date', 'Client', 'File']);
-      sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
-      sheet.setFrozenRows(1);
-    }
+    const ss    = getOrCreateStandaloneSheet('RESELLER_CERT_SS', 'SG Reseller Certificates', ['Date', 'Client', 'File']);
+    const sheet = ss.getSheetByName('SG Reseller Certificates') || ss.getSheets()[0];
 
     const displayDate = data.date ? fmtDate(data.date) : '';
     sheet.appendRow([displayDate, data.clientName || '', fileName]);
@@ -356,15 +378,8 @@ function submitConditionReport(data) {
     const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
-    const ssId  = GLOBAL_DATA_ID || SPREADSHEET_ID;
-    const ss    = SpreadsheetApp.openById(ssId);
-    let   sheet = ss.getSheetByName(CR_SHEET);
-    if (!sheet) {
-      sheet = ss.insertSheet(CR_SHEET);
-      sheet.appendRow(['Date In', 'Stock #', 'Artist', 'Title', 'Condition', 'Signed By', 'CR Document']);
-      sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
-      sheet.setFrozenRows(1);
-    }
+    const ss    = getOrCreateStandaloneSheet('CR_SS', 'SG Condition Reports', ['Date In', 'Stock #', 'Artist', 'Title', 'Condition', 'Signed By', 'CR Document']);
+    const sheet = ss.getSheetByName('SG Condition Reports') || ss.getSheets()[0];
 
     const displayDate = data.dateIn ? fmtDate(data.dateIn) : '';
     sheet.appendRow([
