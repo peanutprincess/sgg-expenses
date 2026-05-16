@@ -302,6 +302,12 @@
       font-family: inherit; text-align: center; -webkit-tap-highlight-color: transparent;
     }
     .cr-cond-btn.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+    .cr-reason-btn {
+      padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; color: #374151;
+      font-family: inherit; text-align: center; -webkit-tap-highlight-color: transparent; white-space: nowrap;
+    }
+    .cr-reason-btn.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
     .cr-textarea {
       width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 11px;
       font-size: 16px; color: #111; background: #fff; outline: none; resize: none;
@@ -311,6 +317,36 @@
       font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
       color: #9ca3af; margin: 18px 0 10px;
     }
+    .cr-dim-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .cr-dim-wrap { display: flex; align-items: center; gap: 5px; }
+    .cr-dim-wrap input { flex: 1; min-width: 0; }
+    .cr-dim-lbl { font-size: 12px; font-weight: 700; color: #6b7280; width: 14px; flex-shrink: 0; }
+    .cr-dim-unit { font-size: 14px; color: #374151; font-weight: 600; flex-shrink: 0; }
+    .cr-diagram-wrap { position: relative; border: 1.5px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fafafa; margin-bottom: 10px; cursor: crosshair; }
+    .cr-diagram-wrap svg { display: block; width: 100%; height: auto; }
+    .cr-marker-layer { position: absolute; inset: 0; pointer-events: none; }
+    .cr-marker {
+      position: absolute; transform: translate(-50%,-50%);
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      pointer-events: auto; user-select: none;
+    }
+    .cr-dmg-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 300; display: flex; align-items: flex-end; }
+    .cr-dmg-sheet { background: #fff; border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; }
+    .cr-dmg-title { font-size: 13px; font-weight: 700; text-align: center; margin-bottom: 14px; color: #374151; }
+    .cr-dmg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .cr-dmg-type-btn {
+      padding: 12px 4px; border: 1.5px solid #e5e7eb; border-radius: 10px;
+      background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; color: #374151;
+      font-family: inherit; text-align: center; -webkit-tap-highlight-color: transparent;
+    }
+    .cr-dmg-type-btn:active { background: #eef2ff; border-color: #6366f1; }
+    .cr-dmg-cancel { width: 100%; margin-top: 10px; padding: 13px; border: none; border-radius: 12px; background: #f3f4f6; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .cr-legend { margin-top: 6px; margin-bottom: 14px; }
+    .cr-legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 12px; color: #374151; }
+    .cr-legend-dot { width: 18px; height: 18px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -729,11 +765,31 @@
       <div class="field"><label>Title</label><input type="text" id="cr-title" placeholder="Artwork title" autocomplete="off"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div class="field"><label>Year</label><input type="text" id="cr-year" placeholder="2025" autocomplete="off"></div>
-        <div class="field"><label>Date In</label><input type="date" id="cr-date-in"></div>
+        <div class="field"><label>Date</label><input type="date" id="cr-date"></div>
       </div>
+
+      <div class="field">
+        <label>Reason for CR</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+          <button type="button" class="cr-reason-btn" onclick="crSetReason(this,'Ship Out')">Ship Out</button>
+          <button type="button" class="cr-reason-btn" onclick="crSetReason(this,'Receiving')">Receiving</button>
+          <button type="button" class="cr-reason-btn" onclick="crSetReason(this,'Client')">Client</button>
+          <button type="button" class="cr-reason-btn" onclick="crSetReason(this,'Insurance')">Insurance</button>
+          <button type="button" class="cr-reason-btn" onclick="crSetReason(this,'Other')">Other</button>
+        </div>
+        <input type="text" id="cr-reason-other" class="field-input" placeholder="Specify reason…" autocomplete="off" style="display:none;margin-top:8px;">
+      </div>
+
       <div class="field"><label>Medium</label><input type="text" id="cr-medium" placeholder="Oil on canvas…" autocomplete="off"></div>
-      <div class="field"><label>Dimensions</label><input type="text" id="cr-dims" placeholder='32" H x 31" W' autocomplete="off"></div>
-      <div class="field"><label>Date Out <span style="color:#9ca3af;font-weight:400;">(optional)</span></label><input type="date" id="cr-date-out"></div>
+
+      <div class="field">
+        <label>Dimensions</label>
+        <div class="cr-dim-group">
+          <div class="cr-dim-wrap"><span class="cr-dim-lbl">H</span><input type="text" id="cr-dim-h" class="field-input" inputmode="decimal" autocomplete="off"><span class="cr-dim-unit">"</span></div>
+          <div class="cr-dim-wrap"><span class="cr-dim-lbl">W</span><input type="text" id="cr-dim-w" class="field-input" inputmode="decimal" autocomplete="off"><span class="cr-dim-unit">"</span></div>
+          <div class="cr-dim-wrap"><span class="cr-dim-lbl">D</span><input type="text" id="cr-dim-d" class="field-input" inputmode="decimal" autocomplete="off"><span class="cr-dim-unit">"</span></div>
+        </div>
+      </div>
 
       <div class="field">
         <label>General Condition</label>
@@ -751,6 +807,58 @@
 
       <div class="cr-section-label">Photographs</div>
       <div class="cr-photo-grid" id="cr-photo-grid"></div>
+
+      <div class="cr-section-label">Condition Diagram</div>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;">Tap the diagram to mark damage locations.</p>
+      <div class="cr-diagram-wrap" id="cr-diagram-wrap">
+        <svg id="cr-diagram-svg" viewBox="0 0 520 240" xmlns="http://www.w3.org/2000/svg">
+          <rect width="520" height="240" fill="#fafafa"/>
+          <line x1="43.3" y1="0" x2="43.3" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="86.7" y1="0" x2="86.7" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="130" y1="0" x2="130" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="173.3" y1="0" x2="173.3" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="216.7" y1="0" x2="216.7" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="260" y1="0" x2="260" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="303.3" y1="0" x2="303.3" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="346.7" y1="0" x2="346.7" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="390" y1="0" x2="390" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="433.3" y1="0" x2="433.3" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="476.7" y1="0" x2="476.7" y2="240" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="24" x2="520" y2="24" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="48" x2="520" y2="48" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="72" x2="520" y2="72" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="96" x2="520" y2="96" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="120" x2="520" y2="120" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="144" x2="520" y2="144" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="168" x2="520" y2="168" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="192" x2="520" y2="192" stroke="#ddd" stroke-width="0.5"/>
+          <line x1="0" y1="216" x2="520" y2="216" stroke="#ddd" stroke-width="0.5"/>
+          <ellipse cx="260" cy="120" rx="255" ry="110" fill="none" stroke="#888" stroke-width="1.5"/>
+        </svg>
+        <div class="cr-marker-layer" id="cr-marker-layer"></div>
+      </div>
+      <div id="cr-diagram-legend" class="cr-legend"></div>
+
+      <!-- Damage type picker bottom sheet -->
+      <div id="cr-dmg-overlay" class="cr-dmg-overlay" style="display:none;">
+        <div class="cr-dmg-sheet">
+          <div class="cr-dmg-title">Select Damage Type</div>
+          <div class="cr-dmg-grid">
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Chip')">Chip</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Dent')">Dent</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Scratches')">Scratches</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Scuffs')">Scuffs</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Cracks')">Cracks</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Missing Part')">Missing Part</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Stain')">Stain</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Paint Loss')">Paint Loss</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Tear')">Tear</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Crease')">Crease</button>
+            <button type="button" class="cr-dmg-type-btn" onclick="crSelectDamage('Other')">Other</button>
+          </div>
+          <button type="button" class="cr-dmg-cancel" onclick="crCancelDamage()">Cancel</button>
+        </div>
+      </div>
 
       <div class="field"><label>Signed By</label><input type="text" id="cr-signed-by" placeholder="Name" autocomplete="off"></div>
       <div class="field"><label>Signature Date</label><input type="date" id="cr-sig-date"></div>
@@ -1239,8 +1347,11 @@
     { key: 'detail-1',      label: 'Detail 1' },
     { key: 'detail-2',      label: 'Detail 2' },
   ];
+  var crReason = null;
+  var crDamagePoints = [];
+  var crPendingPoint = null;
 
-  // Build photo grid + set today's dates
+  // Build photo grid + set today's date
   (function initCR() {
     const grid = document.getElementById('cr-photo-grid');
     CR_SLOTS.forEach(slot => {
@@ -1256,14 +1367,74 @@
     });
     const today = new Date();
     const v = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-    document.getElementById('cr-date-in').value  = v;
+    document.getElementById('cr-date').value    = v;
     document.getElementById('cr-sig-date').value = v;
+
+    // Diagram tap handler
+    var wrap = document.getElementById('cr-diagram-wrap');
+    wrap.addEventListener('click', function(e) {
+      var rect = wrap.getBoundingClientRect();
+      var xPct = (e.clientX - rect.left) / rect.width * 100;
+      var yPct = (e.clientY - rect.top)  / rect.height * 100;
+      crPendingPoint = { x: xPct, y: yPct };
+      document.getElementById('cr-dmg-overlay').style.display = 'flex';
+    });
   })();
 
   function crSetCond(btn, val) {
     crCondition = val;
     document.querySelectorAll('.cr-cond-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
+  }
+
+  function crSetReason(btn, val) {
+    crReason = val;
+    document.querySelectorAll('.cr-reason-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    var other = document.getElementById('cr-reason-other');
+    other.style.display = val === 'Other' ? 'block' : 'none';
+    if (val !== 'Other') other.value = '';
+  }
+
+  function crSelectDamage(type) {
+    document.getElementById('cr-dmg-overlay').style.display = 'none';
+    if (!crPendingPoint) return;
+    var pt = { x: crPendingPoint.x, y: crPendingPoint.y, type: type, n: crDamagePoints.length + 1 };
+    crDamagePoints.push(pt);
+    crPendingPoint = null;
+    crRenderMarkers();
+  }
+
+  function crCancelDamage() {
+    document.getElementById('cr-dmg-overlay').style.display = 'none';
+    crPendingPoint = null;
+  }
+
+  function crRenderMarkers() {
+    var layer = document.getElementById('cr-marker-layer');
+    layer.innerHTML = '';
+    crDamagePoints.forEach(function(pt) {
+      var el = document.createElement('div');
+      el.className = 'cr-marker';
+      el.style.left = pt.x + '%';
+      el.style.top  = pt.y + '%';
+      el.textContent = pt.n;
+      el.title = pt.type;
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        crDamagePoints = crDamagePoints.filter(function(p) { return p.n !== pt.n; });
+        // renumber
+        crDamagePoints.forEach(function(p, i) { p.n = i + 1; });
+        crRenderMarkers();
+      });
+      layer.appendChild(el);
+    });
+    // legend
+    var leg = document.getElementById('cr-diagram-legend');
+    if (!crDamagePoints.length) { leg.innerHTML = ''; return; }
+    leg.innerHTML = crDamagePoints.map(function(pt) {
+      return '<div class="cr-legend-item"><div class="cr-legend-dot">' + pt.n + '</div><span>' + pt.type + '</span></div>';
+    }).join('');
   }
 
   function crHandlePhoto(key, input) {
@@ -1324,22 +1495,40 @@
     const photosGrid = cells.length
       ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">' + cells.join('') + '</div>'
       : '<div style="color:#aaa;font-size:12px;">No photographs attached</div>';
-    const svgW=520,svgH=240,cols=12,rows=10,cx=svgW/2,cy=svgH/2,rx=255,ry=110;
+    // Build SVG diagram with damage markers
+    const svgW=520, svgH=240;
     let gl='';
-    for(let c=0;c<=cols;c++){const x=c*(svgW/cols);gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="#ccc" stroke-width="0.5"/>';}
-    for(let r=0;r<=rows;r++){const y=r*(svgH/rows);gl+='<line x1="0" y1="'+y+'" x2="'+svgW+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
-    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="none" stroke="#888" stroke-width="1.5"/></svg>';
+    for(let c=1;c<12;c++){const x=c*(svgW/12);gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="#ccc" stroke-width="0.5"/>';}
+    for(let r=1;r<10;r++){const y=r*(svgH/10);gl+='<line x1="0" y1="'+y+'" x2="'+svgW+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
+    let markersSvg = '';
+    (data.damagePoints||[]).forEach(function(pt) {
+      const px = pt.x/100*svgW, py = pt.y/100*svgH;
+      markersSvg += '<circle cx="'+px+'" cy="'+py+'" r="9" fill="#ef4444" opacity="0.9"/>';
+      markersSvg += '<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold">'+pt.n+'</text>';
+    });
+    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;width:100%;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="260" cy="120" rx="255" ry="110" fill="none" stroke="#888" stroke-width="1.5"/>'+markersSvg+'</svg>';
+    let legendHtml = '';
+    if ((data.damagePoints||[]).length) {
+      legendHtml = '<div style="margin-top:8px;font-size:10px;color:#555;">' +
+        data.damagePoints.map(function(pt){ return '<span style="margin-right:12px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#ef4444;color:#fff;font-size:8px;font-weight:700;text-align:center;line-height:14px;">'+pt.n+'</span> '+pt.type+'</span>'; }).join('') +
+        '</div>';
+    }
     const fr = function(label,val){ return '<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;"><div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">'+label+'</div><div style="flex:1;font-size:12px;color:#111;">'+(val||'')+'</div></div>'; };
     const hr = '<hr style="border:none;border-top:1px solid #ccc;margin:12px 0;">';
+    const dimsStr = [data.dimH?data.dimH+'"H':'',data.dimW?data.dimW+'"W':'',data.dimD?data.dimD+'"D':''].filter(Boolean).join(' × ');
+    const reasonStr = data.reason === 'Other' ? (data.reasonOther || 'Other') : (data.reason || '');
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;}</style></head><body>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'
-      +'<div style="font-size:15px;font-weight:700;">Sebastian Gladstone</div>'
-      +'<div style="font-size:12px;text-align:right;line-height:1.8;"><div><span style="color:#777;">Date in:</span> '+(data.dateIn||'')+'</div><div><span style="color:#777;">Date out:</span> '+(data.dateOut||'')+'</div></div>'
-      +'</div>'+hr
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+      +'<div><div style="font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:0.01em;">Sebastian Gladstone</div>'
+      +'<div style="font-size:18px;font-weight:700;margin-top:2px;">Condition Report</div></div>'
+      +'<div style="font-size:12px;text-align:right;line-height:1.8;">'
+      +'<div><span style="color:#777;">Date:</span> '+(data.date||'')+'</div>'
+      +(reasonStr?'<div><span style="color:#777;">Reason:</span> '+reasonStr+'</div>':'')
+      +'</div></div>'+hr
       +fr('Stock number', data.stockNum)
       +'<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;">'
       +'<div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">Artwork</div>'
-      +'<div style="flex:1;font-size:12px;color:#111;"><strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'<br>'+(data.medium||'')+'<br>'+(data.dims||'')+'</div>'
+      +'<div style="flex:1;font-size:12px;color:#111;"><strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'<br>'+(data.medium||'')+(dimsStr?'<br>'+dimsStr:'')+'</div>'
       +thumbHtml+'</div>'+hr
       +fr('General condition', condBoxes)
       +fr('Comments', (data.comments||'').replace(/\n/g,'<br>'))
@@ -1348,9 +1537,7 @@
       +hr+'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Photographs</div>'
       +photosGrid+hr
       +'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Condition Diagram</div>'
-      +'<div style="display:flex;gap:14px;align-items:flex-start;">'
-      +'<div style="font-size:10px;color:#555;line-height:1.9;white-space:nowrap;"><div>&#9900; Chip &nbsp; &#10003; Dent &nbsp; &#8212; Scratches</div><div>&#9900; Scuffs &nbsp; //// Cracks &nbsp; = Part missing</div><div>&#8960; Stains &nbsp; &#215; Paint loss &nbsp; &#8743; Tear &nbsp; &#8745;&#8745; Crease</div></div>'
-      +'<div>'+svg+'</div></div>'+hr
+      +svg+legendHtml+hr
       +'<div style="display:flex;gap:48px;margin-top:8px;"><div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Signature</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.signedBy||'')+'</div></div>'
       +'<div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Date</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.sigDate||'')+'</div></div></div>'
       +'</body></html>';
@@ -1361,7 +1548,7 @@
     const stockNum = document.getElementById('cr-stock').value.trim();
     const artist   = document.getElementById('cr-artist').value.trim();
     const title    = document.getElementById('cr-title').value.trim();
-    const dateIn   = document.getElementById('cr-date-in').value;
+    const date     = document.getElementById('cr-date').value;
     if (!stockNum)    { crShowError('Stock # is required.'); return; }
     if (!artist)      { crShowError('Artist is required.'); return; }
     if (!title)       { crShowError('Title is required.'); return; }
@@ -1388,16 +1575,20 @@
       // Step 2: Generate PDF client-side
       await loadHtml2Pdf();
       const formData = {
-        stockNum, artist, title, condition: crCondition, dateIn,
-        dateOut:     document.getElementById('cr-date-out').value,
+        stockNum, artist, title, condition: crCondition, date,
+        reason:      crReason,
+        reasonOther: document.getElementById('cr-reason-other').value.trim(),
         year:        document.getElementById('cr-year').value.trim(),
         medium:      document.getElementById('cr-medium').value.trim(),
-        dims:        document.getElementById('cr-dims').value.trim(),
+        dimH:        document.getElementById('cr-dim-h').value.trim(),
+        dimW:        document.getElementById('cr-dim-w').value.trim(),
+        dimD:        document.getElementById('cr-dim-d').value.trim(),
         comments:    document.getElementById('cr-comments').value.trim(),
         inscription: document.getElementById('cr-inscription').value.trim(),
         frame:       document.getElementById('cr-frame').value.trim(),
         signedBy:    document.getElementById('cr-signed-by').value.trim(),
         sigDate:     document.getElementById('cr-sig-date').value,
+        damagePoints: crDamagePoints.slice(),
       };
       const html = buildCRHtmlMobile(formData, photoUrls);
       const pdfBlob = await html2pdf().set({
@@ -1418,7 +1609,7 @@
       // Step 3: Save PDF + log
       const r2 = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({
         type:'condition-report', stockNum, artist, title,
-        condition: crCondition, dateIn, dateOut: formData.dateOut,
+        condition: crCondition, date,
         signedBy: formData.signedBy, pdfData: pdfBase64
       })});
       const j2 = await r2.json();
@@ -1438,6 +1629,9 @@
 
   function crResetMobile() {
     crCondition = null;
+    crReason = null;
+    crDamagePoints = [];
+    crPendingPoint = null;
     Object.keys(crPhotos).forEach(function(k) { delete crPhotos[k]; });
     CR_SLOTS.forEach(function(slot) {
       const el = document.getElementById('cr-slot-' + slot.key);
@@ -1447,12 +1641,19 @@
       const inp = el.querySelector('input'); if (inp) inp.value = '';
     });
     document.querySelectorAll('.cr-cond-btn').forEach(function(b) { b.classList.remove('selected'); });
-    ['cr-stock','cr-artist','cr-title','cr-year','cr-medium','cr-dims','cr-date-out','cr-comments','cr-inscription','cr-frame','cr-signed-by'].forEach(function(id) {
+    document.querySelectorAll('.cr-reason-btn').forEach(function(b) { b.classList.remove('selected'); });
+    ['cr-stock','cr-artist','cr-title','cr-year','cr-medium','cr-dim-h','cr-dim-w','cr-dim-d','cr-reason-other','cr-comments','cr-inscription','cr-frame','cr-signed-by'].forEach(function(id) {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    var otherInp = document.getElementById('cr-reason-other');
+    if (otherInp) otherInp.style.display = 'none';
+    var ml = document.getElementById('cr-marker-layer');
+    if (ml) ml.innerHTML = '';
+    var leg = document.getElementById('cr-diagram-legend');
+    if (leg) leg.innerHTML = '';
     const today = new Date();
     const v = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-    document.getElementById('cr-date-in').value  = v;
+    document.getElementById('cr-date').value     = v;
     document.getElementById('cr-sig-date').value = v;
     document.getElementById('cr-error').style.display = 'none';
     crShowState('cr-form-state');
