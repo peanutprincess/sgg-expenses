@@ -3,6 +3,9 @@ const SHEET_NAME       = 'NY & LA';
 const INVOICE_SHEET    = 'Contractor Invoices';
 const ROOT_FOLDER_ID   = '1SaiY0KVhBgL-giWpCl5P47ZOQYKsbsUd';
 
+const LOGISTICS_SS_ID     = '1ITOG8VPJa6U9W2WjWj79767ZQaCv8EAct2Uw5xOAZO4';
+const LOGISTICS_IMG_FOLDER = 'Logistics Images';
+
 const GALLERY_SHEET_ID  = '1ORhRQGnIALiDeAQ9Oa93k1s35zdFbqU8y3atMWR_FDk';
 const SHIPPING_SHEET   = 'Shipping Log';
 
@@ -14,12 +17,12 @@ const BOOK_FOLDER_NAME     = 'Book Inventory';
 const RESELLER_CERT_SHEET  = 'Reseller Certificates';
 const CR_SHEET             = 'Condition Reports';
 
-// Finds the "Global-Data" spreadsheet by name and caches its ID.
+// Finds the "Global-Data" spreadsheet by name (creates it if absent) and caches its ID.
 function getGlobalDataSS() {
   const props = PropertiesService.getScriptProperties();
   let ssId = props.getProperty('GLOBAL_DATA_SS_ID');
   if (ssId) {
-    try { return SpreadsheetApp.openById(ssId); } catch(e) { /* stale, re-search */ }
+    try { return SpreadsheetApp.openById(ssId); } catch(e) { props.deleteProperty('GLOBAL_DATA_SS_ID'); }
   }
   const token = ScriptApp.getOAuthToken();
   const q = "name='Global-Data' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
@@ -28,10 +31,17 @@ function getGlobalDataSS() {
     { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
   );
   const files = JSON.parse(resp.getContentText()).files || [];
-  if (!files.length) throw new Error('Could not find a spreadsheet named "Global-Data" in Drive.');
-  ssId = files[0].id;
+  let ss;
+  if (files.length) {
+    ssId = files[0].id;
+    ss = SpreadsheetApp.openById(ssId);
+  } else {
+    // Spreadsheet not found — create it
+    ss = SpreadsheetApp.create('Global-Data');
+    ssId = ss.getId();
+  }
   props.setProperty('GLOBAL_DATA_SS_ID', ssId);
-  return SpreadsheetApp.openById(ssId);
+  return ss;
 }
 
 // Returns the named tab in Global-Data, creating it with headers if absent.
@@ -55,6 +65,9 @@ function doGet(e) {
   }
   if (e && e.parameter && e.parameter.action === 'books') {
     return serveBookInventory();
+  }
+  if (e && e.parameter && e.parameter.action === 'logistics') {
+    return serveLogistics(e.parameter.loc || 'LA');
   }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
@@ -115,6 +128,8 @@ function doPost(e) {
                    data.type === 'reseller-cert'    ? submitResellerCert(data)     :
                    data.type === 'cr-photos'        ? submitCRPhotos(data)         :
                    data.type === 'condition-report' ? submitConditionReport(data)  :
+                   data.type === 'logistics-add'    ? submitLogisticsAdd(data)     :
+                   data.type === 'logistics-update' ? submitLogisticsUpdate(data)  :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -680,6 +695,66 @@ function updateMonthlyBookReport(data, loc, qty, newStock) {
       muteHttpExceptions: true
     }
   );
+}
+
+// ─────────────────────────────────────────
+// LOGISTICS MODULE
+// ─────────────────────────────────────────
+function serveLogistics(loc) {
+  try {
+    const ss    = SpreadsheetApp.openById(LOGISTICS_SS_ID);
+    const sheet = ss.getSheetByName(loc.toUpperCase());
+    if (!sheet) return ContentService.createTextOutput(JSON.stringify({rows:[]})).setMimeType(ContentService.MimeType.JSON);
+    const data = sheet.getDataRange().getValues();
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      const r = data[i];
+      if (!r[0] && !r[2]) continue;
+      rows.push({ row: i+1, client: String(r[0]||''), imageUrl: String(r[1]||''), title: String(r[2]||''), invoice: String(r[3]||''), price: r[4]||'', salePrice: r[5]||'', salesPayout: r[6]||'', artistPaid: String(r[7]||''), galleryPaid: String(r[8]||''), notes: String(r[9]||'') });
+    }
+    return ContentService.createTextOutput(JSON.stringify({rows})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({error:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function submitLogisticsAdd(data) {
+  try {
+    const token = ScriptApp.getOAuthToken();
+    const ss    = SpreadsheetApp.openById(LOGISTICS_SS_ID);
+    const sheet = ss.getSheetByName((data.loc||'LA').toUpperCase());
+    let imageUrl = '';
+    if (data.imageData) {
+      const fId = findOrCreateFolder(token, ROOT_FOLDER_ID, LOGISTICS_IMG_FOLDER);
+      const ext  = (data.imageMime||'image/jpeg').split('/')[1]||'jpg';
+      const name = (data.client||'artwork').replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now()+'.'+ext;
+      const up   = uploadFile(token, fId, name, data.imageMime||'image/jpeg', data.imageData);
+      setPublicRead(token, up.id);
+      imageUrl = 'https://drive.google.com/uc?export=view&id='+up.id;
+    }
+    sheet.appendRow([data.client||'', imageUrl, data.title||'', data.invoice||'', data.price||'', data.salePrice||'', data.salesPayout||'', data.artistPaid||'', data.galleryPaid||'', data.notes||'']);
+    return { success: true };
+  } catch(err) { return { success:false, error:err.toString() }; }
+}
+
+function submitLogisticsUpdate(data) {
+  try {
+    const token = ScriptApp.getOAuthToken();
+    const ss    = SpreadsheetApp.openById(LOGISTICS_SS_ID);
+    const sheet = ss.getSheetByName((data.loc||'LA').toUpperCase());
+    const row   = parseInt(data.row);
+    let imageUrl = data.existingImageUrl || '';
+    if (data.imageData) {
+      const fId  = findOrCreateFolder(token, ROOT_FOLDER_ID, LOGISTICS_IMG_FOLDER);
+      const ext  = (data.imageMime||'image/jpeg').split('/')[1]||'jpg';
+      const name = (data.client||'artwork').replace(/[^a-zA-Z0-9]/g,'_')+'_'+Date.now()+'.'+ext;
+      const up   = uploadFile(token, fId, name, data.imageMime||'image/jpeg', data.imageData);
+      setPublicRead(token, up.id);
+      imageUrl = 'https://drive.google.com/uc?export=view&id='+up.id;
+    }
+    sheet.getRange(row,1,1,10).setValues([[data.client||'', imageUrl, data.title||'', data.invoice||'', data.price||'', data.salePrice||'', data.salesPayout||'', data.artistPaid||'', data.galleryPaid||'', data.notes||'']]);
+    return { success: true };
+  } catch(err) { return { success:false, error:err.toString() }; }
 }
 
 // Run once from Apps Script editor → reformats Book Inventory sheet with proper headers
