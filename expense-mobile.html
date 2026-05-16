@@ -1555,12 +1555,9 @@
       +(dimsStr?'<br>'+dimsStr:'')
       +'</div></div>'+hr
       +fr('General condition', condBoxes)
-      +(data.comments?fr('Comments',(data.comments||'').replace(/
-/g,'<br>')):'')
-      +(data.inscription?fr('Inscription',(data.inscription||'').replace(/
-/g,'<br>')):'')
-      +(data.frame?fr('Frame',(data.frame||'').replace(/
-/g,'<br>')):'')
+      +(data.comments?fr('Comments',(data.comments||'').replace(/\n/g,'<br>')):'')
+      +(data.inscription?fr('Inscription',(data.inscription||'').replace(/\n/g,'<br>')):'')
+      +(data.frame?fr('Frame',(data.frame||'').replace(/\n/g,'<br>')):'')
       +hr+secLabel('Photographs')
       +photosGrid
       +'<div class="pb"></div>';
