@@ -355,50 +355,30 @@
 <style>
   #sgg-splash {
     position: fixed; inset: 0; z-index: 9999;
-    background: #000;
-    display: flex; align-items: center; justify-content: center;
+    background: #1a1a1a;
+    display: flex; align-items: flex-end; justify-content: flex-start;
+    padding: 0 0 38% 8%;
   }
-  #sgg-splash.done { animation: splashOut 0.5s ease forwards; }
-  @keyframes splashOut { to { opacity: 0; pointer-events: none; } }
-
   .sgg-wordmark {
     font-family: Georgia, serif;
-    font-size: 28px;
-    letter-spacing: 0.04em;
-    background: linear-gradient(
-      90deg,
-      #c8c8c8 0%,
-      #c8c8c8 30%,
-      #ffffff 50%,
-      #c8c8c8 70%,
-      #c8c8c8 100%
-    );
-    background-size: 250% 100%;
-    background-position: 200% 0;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmer 1.2s ease-out 0.1s forwards;
-  }
-  @keyframes shimmer {
-    0%   { background-position: 200% 0; opacity: 0.6; }
-    100% { background-position: -50% 0; opacity: 1; }
+    font-size: 13vw;
+    font-weight: 400;
+    color: #e8e8e8;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
 </style>
 
 <div id="sgg-splash">
-  <span class="sgg-wordmark">Sebastian Gladstone</span>
+  <div class="sgg-wordmark">Sebastian<br>Gladstone</div>
 </div>
 
 <script>
   (function() {
-    function sggDismiss() {
+    setTimeout(function() {
       var s = document.getElementById('sgg-splash');
-      if (!s || s.classList.contains('done')) return;
-      s.classList.add('done');
-      setTimeout(function() { if (s.parentNode) s.parentNode.removeChild(s); }, 500);
-    }
-    setTimeout(sggDismiss, 1400);
+      if (s) s.parentNode.removeChild(s);
+    }, 500);
   })();
 </script>
 <!-- ═══ END SPLASH ═══ -->
