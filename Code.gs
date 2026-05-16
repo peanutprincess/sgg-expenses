@@ -700,8 +700,31 @@ function updateMonthlyBookReport(data, loc, qty, newStock) {
 // ─────────────────────────────────────────
 // LOGISTICS MODULE
 // ─────────────────────────────────────────
+
+// Extract Drive file ID from any Drive URL format
+function extractDriveFileId(url) {
+  if (!url) return null;
+  var m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  return null;
+}
+
+// Convert any Drive URL to the embeddable uc?export=view format
+function normalizeDriveUrl(url, token) {
+  if (!url) return '';
+  if (url.includes('uc?export=view')) return url;
+  var fileId = extractDriveFileId(url);
+  if (!fileId) return url;
+  // Make publicly readable so the app can display it without auth
+  try { setPublicRead(token, fileId); } catch(e) {}
+  return 'https://drive.google.com/uc?export=view&id=' + fileId;
+}
+
 function serveLogistics(loc) {
   try {
+    const token = ScriptApp.getOAuthToken();
     const ss    = SpreadsheetApp.openById(LOGISTICS_SS_ID);
     const sheet = ss.getSheetByName(loc.toUpperCase());
     if (!sheet) return ContentService.createTextOutput(JSON.stringify({rows:[]})).setMimeType(ContentService.MimeType.JSON);
@@ -710,7 +733,8 @@ function serveLogistics(loc) {
     for (let i = 1; i < data.length; i++) {
       const r = data[i];
       if (!r[0] && !r[2]) continue;
-      rows.push({ row: i+1, client: String(r[0]||''), imageUrl: String(r[1]||''), title: String(r[2]||''), invoice: String(r[3]||''), price: r[4]||'', salePrice: r[5]||'', salesPayout: r[6]||'', artistPaid: String(r[7]||''), galleryPaid: String(r[8]||''), notes: String(r[9]||'') });
+      const imageUrl = normalizeDriveUrl(String(r[1]||''), token);
+      rows.push({ row: i+1, client: String(r[0]||''), imageUrl, title: String(r[2]||''), invoice: String(r[3]||''), price: r[4]||'', salePrice: r[5]||'', salesPayout: r[6]||'', artistPaid: String(r[7]||''), galleryPaid: String(r[8]||''), notes: String(r[9]||'') });
     }
     return ContentService.createTextOutput(JSON.stringify({rows})).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
