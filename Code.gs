@@ -1,5 +1,5 @@
 const SPREADSHEET_ID   = '1IaEQLuCyzPwvshvqS36sEPqaHuRAw8p4Q-KZ2nsATRM';
-const SHEET_NAME       = 'NY & LA';
+const SHEET_NAME       = 'Expenses';
 const INVOICE_SHEET    = 'Contractor Invoices';
 const ROOT_FOLDER_ID   = '1SaiY0KVhBgL-giWpCl5P47ZOQYKsbsUd';
 

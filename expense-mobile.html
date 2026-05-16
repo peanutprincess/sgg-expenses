@@ -1479,68 +1479,109 @@
     const condBoxes = conditionLabels.map(l =>
       '<span style="margin-right:16px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
     ).join('');
+
+    // ── Thumbnail (portrait, iPhone-shaped) ──
     const thumbData = crPhotos['thumbnail'];
     const thumbHtml = thumbData
-      ? '<img src="' + thumbData.dataUrl + '" style="max-width:90px;max-height:90px;object-fit:contain;float:right;margin-left:12px;">'
+      ? '<div style="float:right;margin-left:14px;width:72px;"><div style="position:relative;padding-bottom:177%;overflow:hidden;border-radius:4px;background:#eee;">'
+        + '<img src="' + thumbData.dataUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">'
+        + '</div></div>'
       : '';
+
+    // ── Photo grid: 4-col, portrait 3:4 cells ──
     const photoSlots = ['front','back','top-left','top-right','bottom-left','bottom-right','detail-1','detail-2'];
-    const photoLabels = { 'front':'Front','back':'Back','top-left':'Top-Left Corner','top-right':'Top-Right Corner','bottom-left':'Bottom-Left Corner','bottom-right':'Bottom-Right Corner','detail-1':'Detail 1','detail-2':'Detail 2' };
+    const photoLabels = { 'front':'Front','back':'Back','top-left':'Top-Left','top-right':'Top-Right','bottom-left':'Bot-Left','bottom-right':'Bot-Right','detail-1':'Detail 1','detail-2':'Detail 2' };
     const cells = photoSlots.map(function(key) {
       const p = crPhotos[key]; const url = photoUrls && photoUrls[key];
       if (!p) return '';
-      const img = '<img src="' + p.dataUrl + '" style="width:100%;height:100px;object-fit:cover;display:block;">';
-      const link = url ? '<a href="' + url + '" style="display:block;">' + img + '</a>' : img;
-      return '<div>' + link + '<div style="font-size:10px;color:#555;text-align:center;margin-top:3px;">' + (photoLabels[key]||key) + '</div></div>';
+      const imgTag = '<img src="' + p.dataUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">';
+      const wrapped = url ? '<a href="' + url + '">' + imgTag + '</a>' : imgTag;
+      return '<div>'
+        + '<div style="position:relative;padding-bottom:133%;overflow:hidden;border-radius:3px;background:#f0f0f0;">' + wrapped + '</div>'
+        + '<div style="font-size:9px;color:#555;text-align:center;margin-top:3px;">' + (photoLabels[key]||key) + '</div>'
+        + '</div>';
     }).filter(Boolean);
     const photosGrid = cells.length
-      ? '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">' + cells.join('') + '</div>'
-      : '<div style="color:#aaa;font-size:12px;">No photographs attached</div>';
-    // Build SVG diagram with damage markers
+      ? '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' + cells.join('') + '</div>'
+      : '<div style="color:#aaa;font-size:12px;padding:12px 0;">No photographs attached</div>';
+
+    // ── SVG diagram with markers ──
     const svgW=520, svgH=240;
     let gl='';
     for(let c=1;c<12;c++){const x=c*(svgW/12);gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="#ccc" stroke-width="0.5"/>';}
     for(let r=1;r<10;r++){const y=r*(svgH/10);gl+='<line x1="0" y1="'+y+'" x2="'+svgW+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
-    let markersSvg = '';
-    (data.damagePoints||[]).forEach(function(pt) {
-      const px = pt.x/100*svgW, py = pt.y/100*svgH;
-      markersSvg += '<circle cx="'+px+'" cy="'+py+'" r="9" fill="#ef4444" opacity="0.9"/>';
-      markersSvg += '<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="9" fill="#fff" font-weight="bold">'+pt.n+'</text>';
+    let markersSvg='';
+    (data.damagePoints||[]).forEach(function(pt){
+      const px=pt.x/100*svgW, py=pt.y/100*svgH;
+      markersSvg+='<circle cx="'+px+'" cy="'+py+'" r="10" fill="#ef4444" opacity="0.9"/>';
+      markersSvg+='<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">'+pt.n+'</text>';
     });
-    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;width:100%;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="260" cy="120" rx="255" ry="110" fill="none" stroke="#888" stroke-width="1.5"/>'+markersSvg+'</svg>';
-    let legendHtml = '';
-    if ((data.damagePoints||[]).length) {
-      legendHtml = '<div style="margin-top:8px;font-size:10px;color:#555;">' +
-        data.damagePoints.map(function(pt){ return '<span style="margin-right:12px;"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#ef4444;color:#fff;font-size:8px;font-weight:700;text-align:center;line-height:14px;">'+pt.n+'</span> '+pt.type+'</span>'; }).join('') +
-        '</div>';
+    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;width:100%;max-width:100%;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="260" cy="120" rx="255" ry="110" fill="none" stroke="#888" stroke-width="1.5"/>'+markersSvg+'</svg>';
+
+    let legendHtml='';
+    if((data.damagePoints||[]).length){
+      legendHtml='<div style="margin-top:10px;font-size:10px;color:#444;display:flex;flex-wrap:wrap;gap:10px;">'
+        +data.damagePoints.map(function(pt){
+          return '<span style="display:flex;align-items:center;gap:4px;">'
+            +'<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;font-size:8px;font-weight:700;">'+pt.n+'</span>'
+            +pt.type+'</span>';
+        }).join('')+'</div>';
     }
-    const fr = function(label,val){ return '<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;"><div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">'+label+'</div><div style="flex:1;font-size:12px;color:#111;">'+(val||'')+'</div></div>'; };
-    const hr = '<hr style="border:none;border-top:1px solid #ccc;margin:12px 0;">';
+
+    const fr = function(label,val){ return '<div style="display:flex;border-bottom:1px solid #e8e8e8;padding:6px 0;min-height:26px;"><div style="width:170px;flex-shrink:0;font-style:italic;font-size:11px;color:#666;padding-right:10px;">'+label+'</div><div style="flex:1;font-size:11px;color:#111;">'+(val||'')+'</div></div>'; };
+    const hr = '<hr style="border:none;border-top:1px solid #ddd;margin:10px 0;">';
+    const secLabel = function(t){ return '<div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#aaa;margin:10px 0 6px;">'+t+'</div>'; };
     const dimsStr = [data.dimH?data.dimH+'"H':'',data.dimW?data.dimW+'"W':'',data.dimD?data.dimD+'"D':''].filter(Boolean).join(' × ');
-    const reasonStr = data.reason === 'Other' ? (data.reasonOther || 'Other') : (data.reason || '');
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:12px;color:#111;background:#fff;}</style></head><body>'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
-      +'<div><div style="font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:0.01em;">Sebastian Gladstone</div>'
-      +'<div style="font-size:18px;font-weight:700;margin-top:2px;">Condition Report</div></div>'
-      +'<div style="font-size:12px;text-align:right;line-height:1.8;">'
-      +'<div><span style="color:#777;">Date:</span> '+(data.date||'')+'</div>'
-      +(reasonStr?'<div><span style="color:#777;">Reason:</span> '+reasonStr+'</div>':'')
+    const reasonStr = data.reason === 'Other' ? (data.reasonOther||'Other') : (data.reason||'');
+
+    const pageStyle = '@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:11px;color:#111;background:#fff;}.pb{page-break-after:always;break-after:page;}';
+
+    // ── PAGE 1: info + photos ──
+    const page1 =
+       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+      +'<div><div style="font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:0.01em;color:#111;">Sebastian Gladstone</div>'
+      +'<div style="font-size:14px;font-weight:700;margin-top:3px;letter-spacing:0.02em;">Condition Report</div></div>'
+      +'<div style="font-size:11px;text-align:right;line-height:1.9;color:#444;">'
+      +'<div><span style="color:#888;">Date: </span>'+(data.date||'')+'</div>'
+      +(reasonStr?'<div><span style="color:#888;">Reason: </span>'+reasonStr+'</div>':'')
       +'</div></div>'+hr
       +fr('Stock number', data.stockNum)
-      +'<div style="display:flex;border-bottom:1px solid #e0e0e0;padding:7px 0;min-height:30px;">'
-      +'<div style="width:190px;flex-shrink:0;font-style:italic;font-size:12px;color:#555;padding-right:10px;">Artwork</div>'
-      +'<div style="flex:1;font-size:12px;color:#111;"><strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'<br>'+(data.medium||'')+(dimsStr?'<br>'+dimsStr:'')+'</div>'
-      +thumbHtml+'</div>'+hr
+      +'<div style="display:flex;border-bottom:1px solid #e8e8e8;padding:6px 0;">'
+      +'<div style="width:170px;flex-shrink:0;font-style:italic;font-size:11px;color:#666;padding-right:10px;">Artwork</div>'
+      +'<div style="flex:1;font-size:11px;color:#111;overflow:hidden;">'
+      +thumbHtml
+      +'<strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')
+      +(data.medium?'<br>'+data.medium:'')
+      +(dimsStr?'<br>'+dimsStr:'')
+      +'</div></div>'+hr
       +fr('General condition', condBoxes)
-      +fr('Comments', (data.comments||'').replace(/\n/g,'<br>'))
-      +fr('Inscription information', (data.inscription||'').replace(/\n/g,'<br>'))
-      +fr('Frame condition and dimensions', (data.frame||'').replace(/\n/g,'<br>'))
-      +hr+'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Photographs</div>'
-      +photosGrid+hr
-      +'<div style="font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Condition Diagram</div>'
+      +(data.comments?fr('Comments',(data.comments||'').replace(/
+/g,'<br>')):'')
+      +(data.inscription?fr('Inscription',(data.inscription||'').replace(/
+/g,'<br>')):'')
+      +(data.frame?fr('Frame',(data.frame||'').replace(/
+/g,'<br>')):'')
+      +hr+secLabel('Photographs')
+      +photosGrid
+      +'<div class="pb"></div>';
+
+    // ── PAGE 2: diagram + sign-off ──
+    const page2 =
+       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+      +'<div style="font-family:Georgia,serif;font-size:13px;font-weight:700;color:#111;">Sebastian Gladstone</div>'
+      +'<div style="font-size:10px;color:#888;">Condition Report — '+(data.stockNum||'')+(data.artist?' — '+data.artist:'')+'</div>'
+      +'</div>'+hr
+      +secLabel('Condition Diagram')
+      +'<p style="font-size:10px;color:#888;margin-bottom:8px;">Each number marks a damage location. See legend below.</p>'
       +svg+legendHtml+hr
-      +'<div style="display:flex;gap:48px;margin-top:8px;"><div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Signature</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.signedBy||'')+'</div></div>'
-      +'<div style="flex:1;"><div style="font-size:10px;color:#777;margin-bottom:6px;">Date</div><div style="border-bottom:1px solid #555;min-height:28px;">'+(data.sigDate||'')+'</div></div></div>'
-      +'</body></html>';
+      +'<div style="display:flex;gap:48px;margin-top:16px;">'
+      +'<div style="flex:1;"><div style="font-size:10px;color:#888;margin-bottom:8px;">Signature</div>'
+      +'<div style="border-bottom:1px solid #555;min-height:32px;font-size:13px;padding-bottom:4px;">'+(data.signedBy||'')+'</div></div>'
+      +'<div style="flex:1;"><div style="font-size:10px;color:#888;margin-bottom:8px;">Date</div>'
+      +'<div style="border-bottom:1px solid #555;min-height:32px;padding-bottom:4px;">'+(data.sigDate||'')+'</div></div>'
+      +'</div>';
+
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+pageStyle+'</style></head><body>'+page1+page2+'</body></html>';
   }
 
   async function crSubmitMobile() {
