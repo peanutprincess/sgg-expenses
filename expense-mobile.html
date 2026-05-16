@@ -337,49 +337,11 @@
     display: block;
   }
 
-  /* Logo: slides in just as art exits */
-  #sgg-logo-wrap {
-    position: absolute;
-    opacity: 0;
-    animation: logoReveal 0.45s ease 1.1s forwards;
-  }
-  @keyframes logoReveal {
-    0%   { opacity: 0; transform: translateY(6px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-
-  /* CSS shimmer — rock-solid on iOS Safari, no SVG animate glitches */
-  .sgg-wordmark {
-    font-family: Georgia, serif;
-    font-size: 27px;
-    letter-spacing: 0.02em;
-    background: linear-gradient(
-      90deg,
-      #1a181b 0%,
-      #1a181b 33%,
-      #d4af60 50%,
-      #1a181b 67%,
-      #1a181b 100%
-    );
-    background-size: 300% 100%;
-    background-position: 200% 0;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: shimmerSlide 2s ease-in-out 1.6s infinite;
-  }
-  @keyframes shimmerSlide {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -100% 0; }
-  }
 </style>
 
 <div id="sgg-splash" onclick="sggDismiss()">
   <div id="sgg-art-wrap">
     <img id="sgg-art" src="" alt="">
-  </div>
-  <div id="sgg-logo-wrap">
-    <span class="sgg-wordmark">Sebastian Gladstone</span>
   </div>
 </div>
 
