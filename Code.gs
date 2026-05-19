@@ -69,6 +69,11 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'logistics') {
     return serveLogistics(e.parameter.loc || 'LA');
   }
+  if (e && e.parameter && e.parameter.action === 'handbook') {
+    return ContentService
+      .createTextOutput(JSON.stringify(getHandbook()))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -802,4 +807,83 @@ function setupBookInventorySheet() {
   sheet.setColumnWidth(5, 200);
   SpreadsheetApp.flush();
   Logger.log('Book Inventory sheet restructured.');
+}
+
+// ─────────────────────────────────────────
+// COMPANY HANDBOOK
+// Reads the handbook Google Doc and returns structured JSON
+// ─────────────────────────────────────────
+function getHandbook() {
+  try {
+    var doc  = DocumentApp.openById('1UyamIq8Hsgy4QUKm-X4-ghpO-FDpLeoh5qyRWVyCPrI');
+    var body = doc.getBody();
+    var items = [];
+    var idCount = {};
+
+    for (var i = 0; i < body.getNumChildren(); i++) {
+      var el   = body.getChild(i);
+      var type = el.getType();
+
+      if (type === DocumentApp.ElementType.PARAGRAPH) {
+        var para = el.asParagraph();
+        var text = para.getText().trim();
+        if (!text) continue;
+
+        var heading = para.getHeading();
+        var tag = 'p';
+        if      (heading === DocumentApp.ParagraphHeading.HEADING1) tag = 'h1';
+        else if (heading === DocumentApp.ParagraphHeading.HEADING2) tag = 'h2';
+        else if (heading === DocumentApp.ParagraphHeading.HEADING3) tag = 'h3';
+
+        var slug = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+        idCount[slug] = (idCount[slug] || 0) + 1;
+        var id = idCount[slug] > 1 ? slug + '-' + idCount[slug] : slug;
+
+        items.push({ tag: tag, text: text, id: id, html: paraToHtml(para) });
+
+      } else if (type === DocumentApp.ElementType.LIST_ITEM) {
+        var li   = el.asListItem();
+        var text = li.getText().trim();
+        if (!text) continue;
+        items.push({ tag: 'li', text: text, id: '', html: paraToHtml(li) });
+      }
+    }
+
+    return { items: items };
+  } catch (err) {
+    return { error: err.toString(), items: [] };
+  }
+}
+
+function paraToHtml(el) {
+  var html = '';
+  for (var i = 0; i < el.getNumChildren(); i++) {
+    var child = el.getChild(i);
+    if (child.getType() !== DocumentApp.ElementType.TEXT) continue;
+    var t   = child.asText();
+    var raw = t.getText();
+    if (!raw) continue;
+
+    var j = 0;
+    while (j < raw.length) {
+      var attrs = t.getAttributes(j);
+      var k = j + 1;
+      while (k < raw.length) {
+        var a2 = t.getAttributes(k);
+        if (a2[DocumentApp.Attribute.BOLD]      !== attrs[DocumentApp.Attribute.BOLD]      ||
+            a2[DocumentApp.Attribute.ITALIC]    !== attrs[DocumentApp.Attribute.ITALIC]    ||
+            a2[DocumentApp.Attribute.UNDERLINE] !== attrs[DocumentApp.Attribute.UNDERLINE] ||
+            a2[DocumentApp.Attribute.LINK_URL]  !== attrs[DocumentApp.Attribute.LINK_URL]) break;
+        k++;
+      }
+      var chunk = raw.slice(j, k).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if (attrs[DocumentApp.Attribute.LINK_URL])  chunk = '<a href="' + attrs[DocumentApp.Attribute.LINK_URL] + '" target="_blank">' + chunk + '</a>';
+      if (attrs[DocumentApp.Attribute.BOLD])       chunk = '<strong>' + chunk + '</strong>';
+      if (attrs[DocumentApp.Attribute.ITALIC])     chunk = '<em>' + chunk + '</em>';
+      if (attrs[DocumentApp.Attribute.UNDERLINE])  chunk = '<u>' + chunk + '</u>';
+      html += chunk;
+      j = k;
+    }
+  }
+  return html;
 }
