@@ -9,45 +9,20 @@ const LOGISTICS_IMG_FOLDER = 'Logistics Images';
 const GALLERY_SHEET_ID  = '1ORhRQGnIALiDeAQ9Oa93k1s35zdFbqU8y3atMWR_FDk';
 const SHIPPING_SHEET   = 'Shipping Log';
 
+const EXHIBITIONS_CAL_ID = 'c_1062df1d655deaa79281e515b51573f79a5fecc969a82d168339f6f6094d2dd5@group.calendar.google.com';
+
 const BOOK_INVENTORY_SHEET = 'Book Inventory';
 const BOOK_LOG_SHEET       = 'Book Log';
 const BOOK_FOLDER_NAME     = 'Book Inventory';
 
-// Tabs within the "Global-Data" spreadsheet
+// Tabs for Condition Reports and Reseller Certificates — stored in the main SPREADSHEET_ID sheet
 const RESELLER_CERT_SHEET  = 'Reseller Certificates';
 const CR_SHEET             = 'Condition Reports';
 
-// Finds the "Global-Data" spreadsheet by name (creates it if absent) and caches its ID.
-function getGlobalDataSS() {
-  const props = PropertiesService.getScriptProperties();
-  let ssId = props.getProperty('GLOBAL_DATA_SS_ID');
-  if (ssId) {
-    try { return SpreadsheetApp.openById(ssId); } catch(e) { props.deleteProperty('GLOBAL_DATA_SS_ID'); }
-  }
-  const token = ScriptApp.getOAuthToken();
-  const q = "name='Global-Data' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false";
-  const resp  = UrlFetchApp.fetch(
-    'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id)&pageSize=1',
-    { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true }
-  );
-  const files = JSON.parse(resp.getContentText()).files || [];
-  let ss;
-  if (files.length) {
-    ssId = files[0].id;
-    ss = SpreadsheetApp.openById(ssId);
-  } else {
-    // Spreadsheet not found — create it
-    ss = SpreadsheetApp.create('Global-Data');
-    ssId = ss.getId();
-  }
-  props.setProperty('GLOBAL_DATA_SS_ID', ssId);
-  return ss;
-}
-
-// Returns the named tab in Global-Data, creating it with headers if absent.
+// Returns the named tab in the main spreadsheet (SPREADSHEET_ID), creating it with headers if absent.
 function getGlobalDataSheet(tabName, headers) {
-  const ss = getGlobalDataSS();
-  let sheet = ss.getSheetByName(tabName);
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let   sheet = ss.getSheetByName(tabName);
   if (!sheet) {
     sheet = ss.insertSheet(tabName);
     sheet.appendRow(headers);
@@ -73,6 +48,9 @@ function doGet(e) {
     return ContentService
       .createTextOutput(JSON.stringify(getHandbook()))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (e && e.parameter && e.parameter.action === 'artists') {
+    return serveArtists();
   }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
@@ -135,6 +113,7 @@ function doPost(e) {
                    data.type === 'condition-report' ? submitConditionReport(data)  :
                    data.type === 'logistics-add'    ? submitLogisticsAdd(data)     :
                    data.type === 'logistics-update' ? submitLogisticsUpdate(data)  :
+                   data.type === 'artists-update'   ? submitArtistsUpdate(data)    :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -321,7 +300,7 @@ function buildShippingFileName(originalName, mimeType, artwork, date) {
 // ─────────────────────────────────────────
 // RESELLER CERTIFICATES
 // Folder path: Root → Reseller Certificates
-// Sheet: "Reseller Certificates" in Global-Data (or SPREADSHEET_ID)
+// Sheet: "Reseller Certificates" in SGG-Global-Data
 // ─────────────────────────────────────────
 function submitResellerCert(data) {
   try {
@@ -388,7 +367,7 @@ function submitCRPhotos(data) {
 // ─────────────────────────────────────────
 // CONDITION REPORTS — step 2: upload PDF + log
 // Folder path: Root → Condition Reports (PDF goes here)
-// Sheet: "Condition Reports" in Global-Data (or SPREADSHEET_ID)
+// Sheet: "Condition Reports" in SGG-Global-Data
 // ─────────────────────────────────────────
 function submitConditionReport(data) {
   try {
@@ -518,7 +497,9 @@ function buildInvoiceFileName(originalName, mimeType, contractor, invoiceNum, da
 }
 
 function fmtDate(dateStr) {
-  const p = dateStr.split('-');
+  if (!dateStr) return '';
+  const p = String(dateStr).split('-');
+  if (p.length < 3) return String(dateStr);
   return parseInt(p[1]) + '/' + parseInt(p[2]) + '/' + p[0];
 }
 
@@ -737,9 +718,29 @@ function serveLogistics(loc) {
     const rows = [];
     for (let i = 1; i < data.length; i++) {
       const r = data[i];
-      if (!r[0] && !r[2]) continue;
+      if (!r[0] && !r[2] && !r[3]) continue;
       const imageUrl = normalizeDriveUrl(String(r[1]||''), token);
-      rows.push({ row: i+1, client: String(r[0]||''), imageUrl, title: String(r[2]||''), invoice: String(r[3]||''), price: r[4]||'', salePrice: r[5]||'', salesPayout: r[6]||'', artistPaid: String(r[7]||''), galleryPaid: String(r[8]||''), notes: String(r[9]||'') });
+      rows.push({
+        row:                  i+1,
+        client:               String(r[0]||''),
+        imageUrl,
+        artist:               String(r[2]||''),
+        title:                String(r[3]||''),
+        year:                 String(r[4]||''),
+        sku:                  String(r[5]||''),
+        dimensions:           String(r[6]||''),
+        material:             String(r[7]||''),
+        invoice:              String(r[8]||''),
+        price:                r[9]||'',
+        salePrice:            r[10]||'',
+        artistPayoutAmount:   r[11]||'',
+        artistPaymentStatus:  String(r[12]||''),
+        artistPayoutRecords:  String(r[13]||''),
+        galleryPaid:          String(r[14]||''),
+        logisticsStatus:      String(r[15]||''),
+        dueDate:              String(r[16]||''),
+        notes:                String(r[17]||''),
+      });
     }
     return ContentService.createTextOutput(JSON.stringify({rows})).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
@@ -761,7 +762,14 @@ function submitLogisticsAdd(data) {
       setPublicRead(token, up.id);
       imageUrl = 'https://drive.google.com/uc?export=view&id='+up.id;
     }
-    sheet.appendRow([data.client||'', imageUrl, data.title||'', data.invoice||'', data.price||'', data.salePrice||'', data.salesPayout||'', data.artistPaid||'', data.galleryPaid||'', data.notes||'']);
+    sheet.appendRow([
+      data.client||'', imageUrl,
+      data.artist||'', data.title||'', data.year||'', data.sku||'',
+      data.dimensions||'', data.material||'',
+      data.invoice||'', data.price||'', data.salePrice||'',
+      data.artistPayoutAmount||'', data.artistPaymentStatus||'', data.artistPayoutRecords||'',
+      data.galleryPaid||'', data.logisticsStatus||'', data.dueDate||'', data.notes||''
+    ]);
     return { success: true };
   } catch(err) { return { success:false, error:err.toString() }; }
 }
@@ -781,7 +789,14 @@ function submitLogisticsUpdate(data) {
       setPublicRead(token, up.id);
       imageUrl = 'https://drive.google.com/uc?export=view&id='+up.id;
     }
-    sheet.getRange(row,1,1,10).setValues([[data.client||'', imageUrl, data.title||'', data.invoice||'', data.price||'', data.salePrice||'', data.salesPayout||'', data.artistPaid||'', data.galleryPaid||'', data.notes||'']]);
+    sheet.getRange(row,1,1,18).setValues([[
+      data.client||'', imageUrl,
+      data.artist||'', data.title||'', data.year||'', data.sku||'',
+      data.dimensions||'', data.material||'',
+      data.invoice||'', data.price||'', data.salePrice||'',
+      data.artistPayoutAmount||'', data.artistPaymentStatus||'', data.artistPayoutRecords||'',
+      data.galleryPaid||'', data.logisticsStatus||'', data.dueDate||'', data.notes||''
+    ]]);
     return { success: true };
   } catch(err) { return { success:false, error:err.toString() }; }
 }
@@ -886,4 +901,164 @@ function paraToHtml(el) {
     }
   }
   return html;
+}
+
+// ─────────────────────────────────────────
+// ARTIST LIST
+// Stored in "Artists" tab of SGG-Global-Data (SPREADSHEET_ID)
+// ─────────────────────────────────────────
+
+function serveArtists() {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Artists');
+    if (!sheet) {
+      sheet = ss.insertSheet('Artists');
+      sheet.appendRow(['Artist Name']);
+      sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+      // Seed with the existing hardcoded list
+      const seed = ['Chad Murray','Clayton Schiff','Cosima zu Knyphausen','Darya Diamond',
+        'Dustin Hodges','Eli Peng','Emma McMillan','Emmanuel Louisnord Desir',
+        'Francis Picabia','Franne Davids','G.V. Rodriguez','Herman Cherry',
+        'Jason Nocito','Jiang Chiang','Kate Spencer Stewart','Luis Bermudez',
+        'Malcolm Kenter','Melvino Garretti','Nan Montgomery','Nevine Mahmoud',
+        'Nick Angelo','Nick Hoecker','Nihura Montiel','Timo Fahler','Tristan Unrau'];
+      seed.forEach(a => sheet.appendRow([a]));
+    }
+    const data    = sheet.getDataRange().getValues();
+    const artists = data.slice(1).map(r => String(r[0]||'').trim()).filter(Boolean).sort();
+    return ContentService.createTextOutput(JSON.stringify({ artists })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString(), artists: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function submitArtistsUpdate(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Artists');
+    if (!sheet) { sheet = ss.insertSheet('Artists'); }
+    sheet.clearContents();
+    sheet.appendRow(['Artist Name']);
+    sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
+    const artists = (data.artists || []).map(a => String(a).trim()).filter(Boolean).sort();
+    artists.forEach(a => sheet.appendRow([a]));
+    logToSheet('ARTISTS UPDATED: ' + artists.length + ' artists');
+    return { success: true, count: artists.length };
+  } catch(err) {
+    logToSheet('ARTISTS ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+// ─────────────────────────────────────────
+// Show Calendar Sync  (restored from v50, adapted for current sheet layout)
+// Sheet cols: A=Show, B=Location (LA/NY), C=Dates (MM/DD-MM/DD)
+// ─────────────────────────────────────────
+
+function syncGalleryToCalendar() {
+  try {
+    const cal  = CalendarApp.getCalendarById(EXHIBITIONS_CAL_ID);
+    const ss   = SpreadsheetApp.openById(GALLERY_SHEET_ID);
+    // Sheet layout: col A = NY show, col B = NYC dates, col E = LA show, col F = LA dates
+    const skipPattern = /\btotal\b|sales\s*goal|summer\s*break|gallery\s*closed|arbitrary|consignment\b|bennet\s*sales/i;
+    let created = 0;
+
+    const thisYear  = new Date().getFullYear();
+    const syncYears = [thisYear - 1, thisYear, thisYear + 1];
+
+    syncYears.forEach(year => {
+      // Find the tab whose name contains the year
+      const sheets = ss.getSheets();
+      const sheet  = sheets.find(s => s.getName().indexOf(String(year)) !== -1);
+      if (!sheet) return;
+
+      // Wipe existing Opening/Closing events for this year, then rebuild
+      const yearStart = new Date(year, 0, 1);
+      const yearEnd   = new Date(year, 11, 31, 23, 59);
+      cal.getEvents(yearStart, yearEnd).forEach(ev => {
+        if (/,\s*(Opening|Closing)\s*\((NYC|LA)\)/i.test(ev.getTitle())) ev.deleteEvent();
+      });
+
+      const data = sheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) {
+        // ── NYC: col A (index 0) = show name, col B (index 1) = dates ──
+        const nyRaw = String(data[i][0] || '').trim();
+        if (nyRaw && !skipPattern.test(nyRaw)) {
+          const nyName = nyRaw.replace(/^\d+\.\s*/, '').replace(/\s*\(consigned\)\s*/gi, '').replace(/\s+BOOK\s*$/i, '').trim();
+          if (nyName) {
+            const dates = parseGalleryDateRange(data[i][1], year);
+            if (dates) {
+              cal.createAllDayEvent(nyName + ', Opening (NYC)', dates.start);
+              cal.createAllDayEvent(nyName + ', Closing (NYC)', dates.end);
+              created += 2;
+            }
+          }
+        }
+
+        // ── LA: col E (index 4) = show name, col F (index 5) = dates ──
+        const laRaw = String(data[i][4] || '').trim();
+        if (laRaw && !skipPattern.test(laRaw)) {
+          const laName = laRaw.replace(/^\d+\.\s*/, '').replace(/\s*\(consigned\)\s*/gi, '').replace(/\s+BOOK\s*$/i, '').trim();
+          if (laName) {
+            const dates = parseGalleryDateRange(data[i][5], year);
+            if (dates) {
+              cal.createAllDayEvent(laName + ', Opening (LA)', dates.start);
+              cal.createAllDayEvent(laName + ', Closing (LA)', dates.end);
+              created += 2;
+            }
+          }
+        }
+      }
+    });
+
+    logToSheet('CALENDAR SYNC OK: ' + created + ' events created');
+    Logger.log('✅ Synced ' + created + ' events to Google Calendar');
+  } catch(err) {
+    logToSheet('CALENDAR SYNC ERR: ' + err.toString());
+    Logger.log('❌ Sync error: ' + err.toString());
+  }
+}
+
+function parseGalleryDateRange(val, year) {
+  if (!val) return null;
+  if (val instanceof Date) return { start: val, end: val };
+
+  // Strip time info like "6-8PM"
+  let str = String(val).trim().replace(/\s+\d{1,2}(?::\d{2})?\s*(?:[-–]\s*\d{1,2}(?::\d{2})?)?\s*[AaPp][Mm]/g, '').trim();
+  if (!str) return null;
+
+  // MM/DD-MM/DD or MM/DD – MM/DD
+  const rangeMatch = str.match(/^(\d{1,2})\/(\d{1,2})\s*[-–]\s*(\d{1,2})\/(\d{1,2})/);
+  if (rangeMatch) {
+    const sM = parseInt(rangeMatch[1]), sD = parseInt(rangeMatch[2]);
+    const eM = parseInt(rangeMatch[3]), eD = parseInt(rangeMatch[4]);
+    return {
+      start: new Date(year,             sM - 1, sD),
+      end:   new Date(eM < sM ? year+1 : year, eM - 1, eD)
+    };
+  }
+
+  // Single date MM/DD
+  const single = str.match(/^(\d{1,2})\/(\d{1,2})/);
+  if (single) {
+    const d = new Date(year, parseInt(single[1]) - 1, parseInt(single[2]));
+    return { start: d, end: d };
+  }
+
+  return null;
+}
+
+// Run once to install the nightly trigger
+function createGallerySyncTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'syncGalleryToCalendar') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('syncGalleryToCalendar')
+    .timeBased().atHour(0).nearMinute(0).everyDays(1)
+    .inTimezone('America/New_York').create();
+  Logger.log('✅ Gallery sync trigger created: runs nightly at midnight ET');
 }
