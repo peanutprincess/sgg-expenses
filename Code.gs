@@ -2,6 +2,7 @@ const SPREADSHEET_ID   = '1IaEQLuCyzPwvshvqS36sEPqaHuRAw8p4Q-KZ2nsATRM';
 const SHEET_NAME       = 'Expenses';
 const INVOICE_SHEET    = 'Contractor Invoices';
 const ROOT_FOLDER_ID   = '1SaiY0KVhBgL-giWpCl5P47ZOQYKsbsUd';
+const CR_FOLDER_ID     = '1EWYGMqhFwNRtT_jWGXNBY2XB7FQvmgtc'; // ss@sebastiangladstone Drive
 
 const LOGISTICS_SS_ID     = '1ITOG8VPJa6U9W2WjWj79767ZQaCv8EAct2Uw5xOAZO4';
 const LOGISTICS_IMG_FOLDER = 'Logistics Images';
@@ -51,6 +52,9 @@ function doGet(e) {
   }
   if (e && e.parameter && e.parameter.action === 'artists') {
     return serveArtists();
+  }
+  if (e && e.parameter && e.parameter.action === 'signatures') {
+    return serveSignatures();
   }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
@@ -113,7 +117,8 @@ function doPost(e) {
                    data.type === 'condition-report' ? submitConditionReport(data)  :
                    data.type === 'logistics-add'    ? submitLogisticsAdd(data)     :
                    data.type === 'logistics-update' ? submitLogisticsUpdate(data)  :
-                   data.type === 'artists-update'   ? submitArtistsUpdate(data)    :
+                   data.type === 'artists-update'     ? submitArtistsUpdate(data)      :
+                   data.type === 'signatures-update' ? submitSignaturesUpdate(data)   :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -338,8 +343,7 @@ function submitResellerCert(data) {
 function submitCRPhotos(data) {
   try {
     const token     = ScriptApp.getOAuthToken();
-    const crRootId  = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Condition Reports');
-    const stockId   = findOrCreateFolder(token, crRootId, data.stockNum || 'Unknown');
+    const stockId   = findOrCreateFolder(token, CR_FOLDER_ID, data.stockNum || 'Unknown');
 
     const photoUrls = {};
     const photos    = data.photos || {};
@@ -372,11 +376,10 @@ function submitCRPhotos(data) {
 function submitConditionReport(data) {
   try {
     const token    = ScriptApp.getOAuthToken();
-    const crRootId = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Condition Reports');
 
     const safeArtist = (data.artist || 'Artist').replace(/[^a-zA-Z0-9 _-]/g, '_');
     const fileName   = (data.stockNum || 'CR') + '_' + safeArtist + '_CR_' + (data.dateIn || '') + '.pdf';
-    const upload     = uploadFile(token, crRootId, fileName, 'application/pdf', data.pdfData);
+    const upload     = uploadFile(token, CR_FOLDER_ID, fileName, 'application/pdf', data.pdfData);
     const fileUrl    = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
@@ -949,6 +952,44 @@ function submitArtistsUpdate(data) {
     return { success: true, count: artists.length };
   } catch(err) {
     logToSheet('ARTISTS ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+function serveSignatures() {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Signatures');
+    if (!sheet) {
+      sheet = ss.insertSheet('Signatures');
+      sheet.appendRow(['Name']);
+      sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+      ['Dylan Varner','Sebastian Gladstone','Stevie Soares'].forEach(n => sheet.appendRow([n]));
+    }
+    const data    = sheet.getDataRange().getValues();
+    const names   = data.slice(1).map(r => String(r[0]||'').trim()).filter(Boolean).sort();
+    return ContentService.createTextOutput(JSON.stringify({ signatures: names })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString(), signatures: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function submitSignaturesUpdate(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Signatures');
+    if (!sheet) { sheet = ss.insertSheet('Signatures'); }
+    sheet.clearContents();
+    sheet.appendRow(['Name']);
+    sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
+    const names = (data.signatures || []).map(n => String(n).trim()).filter(Boolean).sort();
+    names.forEach(n => sheet.appendRow([n]));
+    logToSheet('SIGNATURES UPDATED: ' + names.length + ' names');
+    return { success: true, count: names.length };
+  } catch(err) {
+    logToSheet('SIGNATURES ERR: ' + err.toString());
     return { success: false, error: err.toString() };
   }
 }
