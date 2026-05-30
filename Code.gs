@@ -45,6 +45,11 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'logistics') {
     return serveLogistics(e.parameter.loc || 'LA');
   }
+  if (e && e.parameter && e.parameter.action === 'rebuild-logistics-cache') {
+    buildLogisticsCache('LA');
+    buildLogisticsCache('NY');
+    return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
+  }
   if (e && e.parameter && e.parameter.action === 'handbook') {
     return ContentService
       .createTextOutput(JSON.stringify(getHandbook()))
@@ -711,12 +716,14 @@ function normalizeDriveUrl(url, token) {
   return 'https://drive.google.com/uc?export=view&id=' + fileId;
 }
 
-function serveLogistics(loc) {
+// ─── Logistics Cache ─────────────────────────────────────────────────────────
+
+function buildLogisticsCache(loc) {
   try {
     const token = ScriptApp.getOAuthToken();
     const ss    = SpreadsheetApp.openById(LOGISTICS_SS_ID);
     const sheet = ss.getSheetByName(loc.toUpperCase());
-    if (!sheet) return ContentService.createTextOutput(JSON.stringify({rows:[]})).setMimeType(ContentService.MimeType.JSON);
+    if (!sheet) return;
     const data = sheet.getDataRange().getValues();
     const rows = [];
     for (let i = 1; i < data.length; i++) {
@@ -745,7 +752,43 @@ function serveLogistics(loc) {
         notes:                String(r[17]||''),
       });
     }
-    return ContentService.createTextOutput(JSON.stringify({rows})).setMimeType(ContentService.MimeType.JSON);
+    CacheService.getScriptCache().put('logistics_' + loc.toUpperCase(), JSON.stringify({rows}), 21600);
+    Logger.log('✅ Logistics cache built for ' + loc + ' — ' + rows.length + ' rows');
+  } catch(err) {
+    Logger.log('❌ buildLogisticsCache(' + loc + '): ' + err.toString());
+  }
+}
+
+// Installable trigger handler — fires when the Logistics sheet is edited by a user
+function onLogisticsEdit(e) {
+  buildLogisticsCache('LA');
+  buildLogisticsCache('NY');
+}
+
+// Run once from the Apps Script editor to install the onEdit trigger on the Logistics spreadsheet
+function installLogisticsTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'onLogisticsEdit') ScriptApp.deleteTrigger(t);
+  });
+  const ss = SpreadsheetApp.openById(LOGISTICS_SS_ID);
+  ScriptApp.newTrigger('onLogisticsEdit').forSpreadsheet(ss).onEdit().create();
+  Logger.log('✅ Logistics onEdit trigger installed on sheet ' + LOGISTICS_SS_ID);
+}
+
+function serveLogistics(loc) {
+  try {
+    // Serve from cache if available (populated by onEdit trigger or last write)
+    const cached = CacheService.getScriptCache().get('logistics_' + loc.toUpperCase());
+    if (cached) {
+      return ContentService.createTextOutput(cached).setMimeType(ContentService.MimeType.JSON);
+    }
+    // Cache miss — build live and cache for next request
+    buildLogisticsCache(loc);
+    const fresh = CacheService.getScriptCache().get('logistics_' + loc.toUpperCase());
+    if (fresh) {
+      return ContentService.createTextOutput(fresh).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({rows:[]})).setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({error:err.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -773,6 +816,7 @@ function submitLogisticsAdd(data) {
       data.artistPayoutAmount||'', data.artistPaymentStatus||'', data.artistPayoutRecords||'',
       data.galleryPaid||'', data.logisticsStatus||'', data.dueDate||'', data.notes||''
     ]);
+    buildLogisticsCache(data.loc || 'LA');
     return { success: true };
   } catch(err) { return { success:false, error:err.toString() }; }
 }
@@ -800,6 +844,7 @@ function submitLogisticsUpdate(data) {
       data.artistPayoutAmount||'', data.artistPaymentStatus||'', data.artistPayoutRecords||'',
       data.galleryPaid||'', data.logisticsStatus||'', data.dueDate||'', data.notes||''
     ]]);
+    buildLogisticsCache(data.loc || 'LA');
     return { success: true };
   } catch(err) { return { success:false, error:err.toString() }; }
 }
