@@ -1867,46 +1867,47 @@
   function buildCRHtmlMobile(data, photoUrls) {
     const conditionLabels = ['Excellent','Good','Fair','Poor'];
     const condBoxes = conditionLabels.map(l =>
-      '<span style="margin-right:16px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
+      '<span style="margin-right:20px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
     ).join('');
 
-    // ── Thumbnail (portrait, iPhone-shaped) ──
+    // ── Thumbnail — top-right square ──
     const thumbData = crPhotos['thumbnail'];
     const thumbHtml = thumbData
-      ? '<div style="float:right;margin-left:14px;width:72px;"><div style="position:relative;padding-bottom:177%;overflow:hidden;border-radius:4px;background:#eee;">'
-        + '<img src="' + thumbData.dataUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">'
-        + '</div></div>'
-      : '';
+      ? '<img src="' + thumbData.dataUrl + '" style="width:155px;height:155px;object-fit:contain;border:1px solid #ccc;display:block;">'
+      : '<div style="width:155px;height:155px;background:#d0d0d0;border:1px solid #ccc;"></div>';
 
-    // ── Photo grid: 4-col, portrait 3:4 cells ──
+    // ── Photo grid: 3×3 square cells, fixed 160px height so page 1 never overflows ──
     const photoSlots = ['front','back','top-left','top-right','bottom-left','bottom-right','detail-1','detail-2'];
-    const photoLabels = { 'front':'Front','back':'Back','top-left':'Top-Left','top-right':'Top-Right','bottom-left':'Bot-Left','bottom-right':'Bot-Right','detail-1':'Detail 1','detail-2':'Detail 2' };
     const cells = photoSlots.map(function(key) {
-      const p = crPhotos[key]; const url = photoUrls && photoUrls[key];
-      if (!p) return '';
-      const imgTag = '<img src="' + p.dataUrl + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">';
-      const wrapped = url ? '<a href="' + url + '">' + imgTag + '</a>' : imgTag;
-      return '<div>'
-        + '<div style="position:relative;padding-bottom:133%;overflow:hidden;border-radius:3px;background:#f0f0f0;">' + wrapped + '</div>'
-        + '<div style="font-size:9px;color:#555;text-align:center;margin-top:3px;">' + (photoLabels[key]||key) + '</div>'
+      const p = crPhotos[key];
+      if (!p) return '<div style="height:160px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>';
+      return '<div style="height:160px;border:1px solid #bbb;overflow:hidden;">'
+        + '<img src="' + p.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
         + '</div>';
-    }).filter(Boolean);
-    const photosGrid = cells.length
-      ? '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' + cells.join('') + '</div>'
-      : '<div style="color:#aaa;font-size:12px;padding:12px 0;">No photographs attached</div>';
+    });
+    // 9th slot: signature photo
+    const sigData = crPhotos['thumbnail'];
+    cells.push(sigData
+      ? '<div style="height:160px;border:1px solid #bbb;overflow:hidden;"><img src="' + sigData.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
+      : '<div style="height:160px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>'
+    );
+    const photosGrid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px;">' + cells.join('') + '</div>';
 
-    // ── SVG diagram with markers ──
-    const svgW=520, svgH=240;
-    let gl='';
-    for(let c=1;c<12;c++){const x=c*(svgW/12);gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="#ccc" stroke-width="0.5"/>';}
-    for(let r=1;r<10;r++){const y=r*(svgH/10);gl+='<line x1="0" y1="'+y+'" x2="'+svgW+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
+    // ── SVG diagram — SQUARE viewBox so circle never distorts ──
+    const svgSize = 540, cellSz = 18, gridN = Math.floor(svgSize / cellSz);
+    let gl = '';
+    for(let c=0;c<=gridN;c++){const x=c*cellSz;gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgSize+'" stroke="#ccc" stroke-width="0.5"/>';}
+    for(let r=0;r<=gridN;r++){const y=r*cellSz;gl+='<line x1="0" y1="'+y+'" x2="'+svgSize+'" y2="'+y+'" stroke="#ccc" stroke-width="0.5"/>';}
+    const cx=svgSize/2, cy=svgSize/2, radius=Math.round(svgSize*0.46);
     let markersSvg='';
     (data.damagePoints||[]).forEach(function(pt){
-      const px=pt.x/100*svgW, py=pt.y/100*svgH;
-      markersSvg+='<circle cx="'+px+'" cy="'+py+'" r="10" fill="#ef4444" opacity="0.9"/>';
-      markersSvg+='<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">'+pt.n+'</text>';
+      const px=pt.x/100*svgSize, py=pt.y/100*svgSize;
+      markersSvg+='<circle cx="'+px+'" cy="'+py+'" r="12" fill="#ef4444" opacity="0.9"/>';
+      markersSvg+='<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">'+pt.n+'</text>';
     });
-    const svg='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="border:1px solid #ccc;display:block;width:100%;max-width:100%;"><rect width="'+svgW+'" height="'+svgH+'" fill="#fafafa"/>'+gl+'<ellipse cx="260" cy="120" rx="255" ry="110" fill="none" stroke="#888" stroke-width="1.5"/>'+markersSvg+'</svg>';
+    const svg='<svg viewBox="0 0 '+svgSize+' '+svgSize+'" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;max-height:680px;border:1px solid #bbb;">'
+      +'<rect width="'+svgSize+'" height="'+svgSize+'" fill="white"/>'+gl
+      +'<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="#555" stroke-width="1.5"/>'+markersSvg+'</svg>';
 
     let legendHtml='';
     if((data.damagePoints||[]).length){
@@ -1918,54 +1919,53 @@
         }).join('')+'</div>';
     }
 
-    const fr = function(label,val){ return '<div style="display:flex;border-bottom:1px solid #e8e8e8;padding:6px 0;min-height:26px;"><div style="width:170px;flex-shrink:0;font-style:italic;font-size:11px;color:#666;padding-right:10px;">'+label+'</div><div style="flex:1;font-size:11px;color:#111;">'+(val||'')+'</div></div>'; };
-    const hr = '<hr style="border:none;border-top:1px solid #ddd;margin:10px 0;">';
-    const secLabel = function(t){ return '<div style="font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#aaa;margin:10px 0 6px;">'+t+'</div>'; };
+    const fr = function(label,val){ return '<div style="display:flex;padding:5px 0;min-height:24px;align-items:flex-start;"><div style="width:200px;flex-shrink:0;font-size:10px;font-weight:700;color:#555;padding-right:12px;line-height:1.5;">'+label+'</div><div style="flex:1;font-size:11px;color:#111;line-height:1.5;border-bottom:1px solid #ccc;padding-bottom:2px;">'+(val||'')+'</div></div>'; };
+    const doubleRule = '<div style="margin:10px 0;"><div style="border-top:1px solid #555;"></div><div style="border-top:1px solid #555;margin-top:3px;"></div></div>';
     const dimsStr = [data.dimH?data.dimH+'"H':'',data.dimW?data.dimW+'"W':'',data.dimD?data.dimD+'"D':''].filter(Boolean).join(' × ');
-    const reasonStr = data.reason === 'Other' ? (data.reasonOther||'Other') : (data.reason||'');
 
-    const pageStyle = '@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:11px;color:#111;background:#fff;}.pb{page-break-after:always;break-after:page;}';
+    const pageStyle = '@page{size:8.5in 11in;margin:0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:12px;color:#111;background:#fff;}.pb{page-break-after:always;break-after:page;}';
 
     // ── PAGE 1: info + photos ──
     const page1 =
-       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
-      +'<div><div style="font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:0.01em;color:#111;">Sebastian Gladstone</div>'
-      +'<div style="font-size:14px;font-weight:700;margin-top:3px;letter-spacing:0.02em;">Condition Report</div></div>'
-      +'<div style="font-size:11px;text-align:right;line-height:1.9;color:#444;">'
-      +'<div><span style="color:#888;">Date: </span>'+(data.date||'')+'</div>'
-      +(reasonStr?'<div><span style="color:#888;">Reason: </span>'+reasonStr+'</div>':'')
-      +'</div></div>'+hr
-      +fr('Stock number', data.stockNum)
-      +'<div style="display:flex;border-bottom:1px solid #e8e8e8;padding:6px 0;">'
-      +'<div style="width:170px;flex-shrink:0;font-style:italic;font-size:11px;color:#666;padding-right:10px;">Artwork</div>'
-      +'<div style="flex:1;font-size:11px;color:#111;overflow:hidden;">'
-      +thumbHtml
-      +'<strong>'+(data.artist||'')+'</strong><br><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')
-      +(data.medium?'<br>'+data.medium:'')
-      +(dimsStr?'<br>'+dimsStr:'')
-      +'</div></div>'+hr
-      +fr('General condition', condBoxes)
+       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
+      +'<div style="flex:1;padding-right:24px;">'
+      +'<div style="font-size:18px;font-weight:700;margin-bottom:2px;">Condition Report</div>'
+      +'<div style="font-size:13px;margin-bottom:8px;">Sebastian Gladstone</div>'
+      +'<div style="font-size:10px;font-weight:700;color:#555;margin-bottom:8px;">'
+      +'<span>Date:</span>&nbsp;<span style="font-weight:400;">'+(data.date||'')+'</span>'
+      +(data.location?'&nbsp;&nbsp;&nbsp;&nbsp;<span>Location:</span>&nbsp;<span style="font-weight:400;">'+data.location+'</span>':'')
+      +'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:#555;margin-bottom:6px;">Artwork</div>'
+      +'<div style="padding-left:100px;line-height:1.6;">'
+      +'<div style="font-weight:700;font-size:12px;">'+(data.artist||'')+'</div>'
+      +'<div style="font-size:12px;"><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'</div>'
+      +(data.medium?'<div style="font-weight:700;font-size:12px;">'+data.medium+'</div>':'')
+      +(dimsStr?'<div style="font-size:12px;">'+dimsStr+'</div>':'')
+      +'</div></div>'
+      +'<div style="flex-shrink:0;">'+thumbHtml+'</div>'
+      +'</div>'
+      +doubleRule
+      +fr('General Condition', condBoxes)
       +(data.comments?fr('Comments',(data.comments||'').replace(/\n/g,'<br>')):'')
-      +(data.inscription?fr('Inscription',(data.inscription||'').replace(/\n/g,'<br>')):'')
-      +(data.frame?fr('Frame',(data.frame||'').replace(/\n/g,'<br>')):'')
-      +hr+secLabel('Photographs')
+      +(data.inscription?fr('Inscription information',(data.inscription||'').replace(/\n/g,'<br>')):'')
+      +(data.frame?fr('Frame condition and dimensions',(data.frame||'').replace(/\n/g,'<br>')):'')
+      +doubleRule
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">Photographs</div>'
       +photosGrid
       +'<div class="pb"></div>';
 
     // ── PAGE 2: diagram + sign-off ──
     const page2 =
-       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
-      +'<div style="font-family:Georgia,serif;font-size:13px;font-weight:700;color:#111;">Sebastian Gladstone</div>'
-      +'<div style="font-size:10px;color:#888;">Condition Report — '+(data.stockNum||'')+(data.artist?' — '+data.artist:'')+'</div>'
-      +'</div>'+hr
-      +secLabel('Condition Diagram')
-      +'<p style="font-size:10px;color:#888;margin-bottom:8px;">Each number marks a damage location. See legend below.</p>'
-      +svg+legendHtml+hr
-      +'<div style="display:flex;gap:48px;margin-top:16px;">'
-      +'<div style="flex:1;"><div style="font-size:10px;color:#888;margin-bottom:8px;">Signature</div>'
-      +'<div style="border-bottom:1px solid #555;min-height:32px;font-size:13px;padding-bottom:4px;">'+(data.signedBy||'')+'</div></div>'
-      +'<div style="flex:1;"><div style="font-size:10px;color:#888;margin-bottom:8px;">Date</div>'
-      +'<div style="border-bottom:1px solid #555;min-height:32px;padding-bottom:4px;">'+(data.sigDate||'')+'</div></div>'
+       '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">Condition Diagrahm</div>'
+      +'<div style="font-size:10px;color:#555;line-height:1.9;margin-bottom:14px;">'
+      +'<div>&#9900; Chip &nbsp;&nbsp;&nbsp; &#10003; Dent &nbsp;&nbsp;&nbsp; &#8212; Scratches</div>'
+      +'<div>&#9900; Scuffs &nbsp;&nbsp;&nbsp; //// Cracks &nbsp;&nbsp;&nbsp; = Part missing</div>'
+      +'<div>&#8960; Stains &nbsp;&nbsp;&nbsp; &#215; Paint loss &nbsp;&nbsp;&nbsp; &#8743; Tear &nbsp;&nbsp;&nbsp; &#8745;&#8745; Crease</div>'
+      +'</div>'
+      +svg+legendHtml
+      +'<div style="display:flex;justify-content:space-between;margin-top:16px;padding-bottom:4px;border-bottom:1px solid #555;">'
+      +'<div style="font-size:12px;font-weight:700;">Signature</div>'
+      +'<div style="font-size:12px;font-weight:700;">Date</div>'
       +'</div>';
 
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+pageStyle+'</style></head><body>'+page1+page2+'</body></html>';
