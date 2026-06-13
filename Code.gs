@@ -61,6 +61,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'signatures') {
     return serveSignatures();
   }
+  if (e && e.parameter && e.parameter.action === 'contractors') {
+    return serveContractors();
+  }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -122,8 +125,12 @@ function doPost(e) {
                    data.type === 'condition-report' ? submitConditionReport(data)  :
                    data.type === 'logistics-add'    ? submitLogisticsAdd(data)     :
                    data.type === 'logistics-update' ? submitLogisticsUpdate(data)  :
+                   data.type === 'save_backtag'      ? submitBacktag(data)            :
                    data.type === 'artists-update'     ? submitArtistsUpdate(data)      :
-                   data.type === 'signatures-update' ? submitSignaturesUpdate(data)   :
+                   data.type === 'signatures-update'   ? submitSignaturesUpdate(data)     :
+                   data.type === 'contractors-update' ? submitContractorsUpdate(data)   :
+                   data.type === 'parse_bol'          ? parseBOL(data)                  :
+                   data.type === 'save_bol'           ? saveBOL(data)                   :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -142,7 +149,8 @@ function doPost(e) {
 function submitExpense(data) {
   try {
     const token      = ScriptApp.getOAuthToken();
-    const cityId     = findOrCreateFolder(token, ROOT_FOLDER_ID, data.location);
+    const expId      = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Expenses');
+    const cityId     = findOrCreateFolder(token, expId, data.location);
     const receiptsId = findOrCreateFolder(token, cityId, 'Receipts');
     const monthId    = findOrCreateFolder(token, receiptsId, getMonthYear(data.date));
 
@@ -182,12 +190,13 @@ function submitExpense(data) {
 
 // ─────────────────────────────────────────
 // CONTRACTOR INVOICES
-// Folder path: Root → City → Contractor Invoices → Contractor → Month Year
+// Folder path: Root → Expenses → City → Contractor Invoices → Contractor → Month Year
 // ─────────────────────────────────────────
 function submitInvoice(data) {
   try {
     const token        = ScriptApp.getOAuthToken();
-    const cityId       = findOrCreateFolder(token, ROOT_FOLDER_ID, data.location);
+    const expId        = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Expenses');
+    const cityId       = findOrCreateFolder(token, expId, data.location);
     const invRootId    = findOrCreateFolder(token, cityId, 'Contractor Invoices');
     const contractorId = findOrCreateFolder(token, invRootId, data.contractor);
     const monthId      = findOrCreateFolder(token, contractorId, getMonthYear(data.date));
@@ -305,6 +314,25 @@ function buildShippingFileName(originalName, mimeType, artwork, date) {
   const ext = (mimeType || '').split('/')[1] || 'jpg';
   const art = (artwork || 'artwork').replace(/[^a-zA-Z0-9]/g,'_').substring(0,30);
   return art + '_' + date + '.' + ext;
+}
+
+// ─────────────────────────────────────────
+// BACK TAGS
+// Folder path: Root → Back Tags
+// ─────────────────────────────────────────
+function submitBacktag(data) {
+  try {
+    const token    = ScriptApp.getOAuthToken();
+    const folderId = findOrCreateFolder(token, ROOT_FOLDER_ID, 'Back Tags');
+    const fileName = data.fileName || ('backtags_' + new Date().toISOString().slice(0,10) + '.pdf');
+    const upload   = uploadFile(token, folderId, fileName, 'application/pdf', data.fileData);
+    const fileUrl  = 'https://drive.google.com/file/d/' + upload.id + '/view';
+    logToSheet('BACKTAG OK: ' + fileName);
+    return { success: true, fileUrl: fileUrl };
+  } catch (err) {
+    logToSheet('BACKTAG ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
 }
 
 // ─────────────────────────────────────────
@@ -1039,6 +1067,46 @@ function submitSignaturesUpdate(data) {
   }
 }
 
+function serveContractors() {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Contractors');
+    if (!sheet) {
+      sheet = ss.insertSheet('Contractors');
+      sheet.appendRow(['Contractor Name']);
+      sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+      sheet.setFrozenRows(1);
+      ['Chasen Wolcott','Jesus Cardenas','Jonathan Austin','Kial Hocker',
+       'Matthew Debbaudt','Sheila Alcibar','Stevie Soares','Sydney Busic','Yatta']
+        .forEach(n => sheet.appendRow([n]));
+    }
+    const data        = sheet.getDataRange().getValues();
+    const contractors = data.slice(1).map(r => String(r[0]||'').trim()).filter(Boolean).sort();
+    return ContentService.createTextOutput(JSON.stringify({ contractors })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString(), contractors: [] })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function submitContractorsUpdate(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let   sheet = ss.getSheetByName('Contractors');
+    if (!sheet) { sheet = ss.insertSheet('Contractors'); }
+    sheet.clearContents();
+    sheet.appendRow(['Contractor Name']);
+    sheet.getRange(1,1,1,1).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
+    const contractors = (data.contractors || []).map(n => String(n).trim()).filter(Boolean).sort();
+    contractors.forEach(n => sheet.appendRow([n]));
+    logToSheet('CONTRACTORS UPDATED: ' + contractors.length + ' contractors');
+    return { success: true, count: contractors.length };
+  } catch(err) {
+    logToSheet('CONTRACTORS ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
 // ─────────────────────────────────────────
 // Show Calendar Sync  (restored from v50, adapted for current sheet layout)
 // Sheet cols: A=Show, B=Location (LA/NY), C=Dates (MM/DD-MM/DD)
@@ -1147,4 +1215,93 @@ function createGallerySyncTrigger() {
     .timeBased().atHour(0).nearMinute(0).everyDays(1)
     .inTimezone('America/New_York').create();
   Logger.log('✅ Gallery sync trigger created: runs nightly at midnight ET');
+}
+
+// ─────────────────────────────────────────
+// BILL OF LADING — parse (AI) + save
+// ─────────────────────────────────────────
+const BOL_SHEET = 'BOL Log';
+
+function parseBOL(data) {
+  try {
+    const apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set in Script Properties');
+
+    const resp = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      payload: JSON.stringify({
+        model: 'claude-opus-4-8',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: { type: 'base64', media_type: data.mimeType || 'application/pdf', data: data.fileData }
+            },
+            {
+              type: 'text',
+              text: 'Extract the following fields from this Bill of Lading and return ONLY valid JSON with these keys: bol_number, date (ISO 8601 YYYY-MM-DD if present), carrier, origin, destination, pieces (integer), artist, artwork, notes. Use null for missing fields.'
+            }
+          ]
+        }]
+      }),
+      muteHttpExceptions: true
+    });
+
+    const body = JSON.parse(resp.getContentText());
+    if (resp.getResponseCode() !== 200) throw new Error(body.error && body.error.message || 'Claude API error');
+
+    const raw = body.content[0].text.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Could not parse AI response');
+    const fields = JSON.parse(jsonMatch[0]);
+    return { success: true, fields: fields };
+
+  } catch (err) {
+    logToSheet('BOL PARSE ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+function saveBOL(data) {
+  try {
+    const token     = ScriptApp.getOAuthToken();
+    const bolRootId = findOrCreateFolder(token, ROOT_FOLDER_ID, 'BOL');
+    const safeArtist = (data.artist || 'Unknown').replace(/[^a-zA-Z0-9 _-]/g, '_');
+    const fileName  = (data.bol_number ? data.bol_number + '_' : '') + safeArtist + '_BOL.pdf';
+    const upload    = uploadFile(token, bolRootId, fileName, data.mimeType || 'application/pdf', data.fileData);
+    const fileUrl   = 'https://drive.google.com/file/d/' + upload.id + '/view';
+    setPublicRead(token, upload.id);
+
+    const sheet = getGlobalDataSheet(BOL_SHEET, ['Date','BOL #','Artist','Artwork','Carrier','Origin','Destination','Pieces','Notes','File']);
+    sheet.appendRow([
+      data.date        || '',
+      data.bol_number  || '',
+      data.artist      || '',
+      data.artwork     || '',
+      data.carrier     || '',
+      data.origin      || '',
+      data.destination || '',
+      data.pieces      || '',
+      data.notes       || '',
+      ''
+    ]);
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 10).setFormula(
+      '=HYPERLINK("' + fileUrl.replace(/"/g,'""') + '","' + fileName.replace(/"/g,'""') + '")'
+    );
+
+    logToSheet('BOL SAVE OK: ' + fileName);
+    return { success: true, fileUrl: fileUrl, fileName: fileName };
+
+  } catch (err) {
+    logToSheet('BOL SAVE ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
 }

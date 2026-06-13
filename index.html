@@ -2,114 +2,193 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SGG Expenses</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGG Internal</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f0f5;
+      background: #FFC7D1;
       min-height: 100vh;
-      padding: 16px;
+      display: flex;
     }
 
-    .card {
-      max-width: 480px;
-      margin: 0 auto;
-      background: #fff;
-      border-radius: 20px;
-      padding: 24px 20px 28px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 220px;
+      min-height: 100vh;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+    }
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .sidebar-logo span {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .sidebar-logo small {
+      display: block;
+      font-size: 11px;
+      color: #666;
+      margin-top: 2px;
+      letter-spacing: 0.3px;
+    }
+    .nav-list {
+      list-style: none;
+      padding: 12px 0;
+      flex: 1;
+    }
+    .nav-item {
+      padding: 0 12px;
+      margin-bottom: 2px;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #999;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      user-select: none;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-link:hover { background: #1e1e1e; color: #fff; }
+    .nav-link.active { background: #fff; color: #111; font-weight: 600; }
+    .nav-icon { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Main ── */
+    #main {
+      margin-left: 220px;
+      flex: 1;
+      min-height: 100vh;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    h1 {
-      font-size: 20px;
+    /* ── Views ── */
+    .view { display: none; width: 100%; max-width: 600px; }
+    .view.active { display: block; }
+
+    /* ── Page Header ── */
+    .page-title {
+      font-size: 22px;
       font-weight: 700;
       color: #111;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       letter-spacing: -0.3px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
 
     /* ── Drop Zone ── */
     .drop-zone {
       border: 2px dashed #d1d5db;
       border-radius: 14px;
-      padding: 32px 16px;
+      padding: 28px 16px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: all 0.18s;
       background: #fafafa;
       margin-bottom: 18px;
-      position: relative;
     }
+    .drop-zone:hover { border-color: #4f8ef7; background: #eef4ff; }
     .drop-zone.drag-over { border-color: #4f8ef7; background: #eef4ff; }
     .drop-zone.has-file  { border-color: #22c55e; background: #f0fdf4; border-style: solid; }
-    .dz-icon  { font-size: 36px; line-height: 1; margin-bottom: 8px; }
-    .dz-label { font-size: 14px; color: #6b7280; }
-    .dz-name  { font-size: 14px; font-weight: 600; color: #16a34a; margin-top: 6px; word-break: break-all; }
-    #fileInput { display: none; }
+    .dz-icon  { font-size: 32px; line-height: 1; margin-bottom: 8px; }
+    .dz-label { font-size: 13px; color: #6b7280; }
+    .dz-name  { font-size: 13px; font-weight: 600; color: #16a34a; margin-top: 5px; word-break: break-all; }
+    input[type="file"] { display: none; }
 
-    /* ── Location Buttons ── */
-    .loc-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 8px; }
-    .loc-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    /* ── Location / Direction Buttons ── */
+    .loc-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 7px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .loc-row   { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
     .loc-btn {
-      padding: 14px 10px;
+      flex: 1;
+      min-width: 80px;
+      padding: 12px 10px;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
       background: #fff;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.15s ease;
-      user-select: none;
+      transition: all 0.15s;
+      text-align: center;
     }
-    .loc-btn:active { transform: scale(0.97); }
+    .loc-btn:hover { border-color: #9ca3af; }
     .loc-btn.sel-nyc { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
     .loc-btn.sel-la  { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
 
     /* ── Fields ── */
     .field { margin-bottom: 14px; }
-    .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 5px;
-    }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
     .field input,
-    .field select {
+    .field select,
+    .field textarea {
       width: 100%;
-      padding: 13px 14px;
+      padding: 12px 14px;
       border: 1.5px solid #e5e7eb;
       border-radius: 11px;
-      font-size: 16px;
+      font-size: 15px;
       color: #111;
       background: #fff;
       outline: none;
       -webkit-appearance: none;
       appearance: none;
       transition: border-color 0.15s;
+      font-family: inherit;
     }
     .field input:focus,
-    .field select:focus { border-color: #3b82f6; }
-    .field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .field select:focus,
+    .field textarea:focus { border-color: #3b82f6; }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .field textarea { resize: vertical; min-height: 72px; }
 
     /* ── Submit ── */
     .submit-btn {
       width: 100%;
-      padding: 16px;
+      padding: 15px;
       background: #111;
       color: #fff;
       border: none;
       border-radius: 13px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
       margin-top: 6px;
       letter-spacing: 0.2px;
       transition: background 0.15s, transform 0.1s;
     }
+    .submit-btn:hover:not(:disabled) { background: #333; }
     .submit-btn:active:not(:disabled) { transform: scale(0.98); }
     .submit-btn:disabled { background: #9ca3af; cursor: not-allowed; }
 
@@ -123,10 +202,9 @@
       background: #fef2f2;
       border-radius: 8px;
     }
-
-    #loading-state, #success-state { display: none; text-align: center; padding: 30px 16px; }
+    .loading-state, .success-state { display: none; text-align: center; padding: 40px 16px; }
     .load-spinner {
-      width: 44px; height: 44px;
+      width: 40px; height: 40px;
       border: 3px solid #e5e7eb;
       border-top-color: #111;
       border-radius: 50%;
@@ -134,146 +212,579 @@
       margin: 0 auto 14px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-state p { color: #6b7280; font-size: 14px; }
-    .success-icon { font-size: 52px; margin-bottom: 12px; }
+    .loading-state p { color: #6b7280; font-size: 14px; }
+    .success-icon  { font-size: 48px; margin-bottom: 12px; }
     .success-title { font-size: 20px; font-weight: 700; color: #16a34a; margin-bottom: 6px; }
-    .success-detail { color: #6b7280; font-size: 13px; margin-bottom: 20px; }
-    .success-link { display: inline-block; font-size: 13px; font-weight: 600; color: #3b82f6; margin-bottom: 20px; text-decoration: none; }
+    .success-detail{ color: #6b7280; font-size: 13px; margin-bottom: 18px; }
+    .success-link  { display: inline-block; font-size: 13px; font-weight: 600; color: #3b82f6; margin-bottom: 20px; text-decoration: none; }
     .again-btn {
-      padding: 13px 28px;
+      padding: 12px 28px;
       background: #f3f4f6;
       border: none;
       border-radius: 11px;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       color: #111;
     }
-    .again-btn:active { background: #e5e7eb; }
+    .again-btn:hover { background: #e5e7eb; }
+
+    /* ── Section Divider ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 20px 0 10px;
+    }
+
+    /* ── Exhibition ── */
+    .year-row { display: flex; gap: 8px; margin-bottom: 20px; align-items: center; }
+    .year-btn {
+      padding: 8px 18px;
+      border: 2px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #374151;
+      transition: all 0.15s;
+    }
+    .year-btn.active { background: #111; color: #fff; border-color: #111; }
+    .refresh-btn {
+      margin-left: auto;
+      padding: 8px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.15s;
+    }
+    .refresh-btn:hover { border-color: #9ca3af; color: #111; }
+    #exh-body { min-height: 100px; }
+    .exh-city-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #6b7280; margin-bottom: 10px; }
+    .exh-item { padding: 12px 14px; background: #f9fafb; border-radius: 10px; margin-bottom: 8px; }
+    .exh-show  { font-size: 14px; font-weight: 600; color: #111; }
+    .exh-dates { font-size: 12px; color: #6b7280; margin-top: 3px; }
+    .exh-empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 24px 0; }
+    .exh-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #111;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 30px auto;
+    }
+    .exh-section { margin-bottom: 28px; }
+
+    /* ── Operations Calendars ── */
+    .cal-section { margin-bottom: 28px; }
+    .cal-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cal-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .cal-dot-nyc { background: rgba(234,88,12,0.85); }
+    .cal-dot-la  { background: rgba(160,120,0,0.85); }
+    .cal-frame {
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    /* ── Shipping loc buttons (smaller, more of them) ── */
+    .ship-loc-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+    .ship-loc-btn {
+      padding: 9px 12px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #374151;
+    }
+    .ship-loc-btn:hover { border-color: #9ca3af; }
+    .ship-loc-btn.sel-nyc { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+    .ship-loc-btn.sel-la  { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+
+    /* ── Book stock badge ── */
+    #book-stock-badge {
+      display: none;
+      padding: 10px 14px;
+      background: #f0fdf4;
+      border: 1.5px solid #22c55e;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #16a34a;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    /* ── Handbook Placeholder ── */
+    .handbook-hero {
+      text-align: center;
+      padding: 60px 24px 40px;
+    }
+    .handbook-icon { font-size: 56px; margin-bottom: 20px; }
+    .handbook-title { font-size: 24px; font-weight: 700; color: #111; margin-bottom: 10px; }
+    .handbook-sub { font-size: 15px; color: #6b7280; line-height: 1.6; max-width: 360px; margin: 0 auto 32px; }
+    .handbook-coming {
+      display: inline-block;
+      padding: 8px 20px;
+      background: #111;
+      color: #fff;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .handbook-sections {
+      margin-top: 40px;
+      text-align: left;
+    }
+    .handbook-section-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: #f9fafb;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
+    .handbook-section-icon { font-size: 20px; flex-shrink: 0; }
+    .handbook-section-label { font-size: 14px; font-weight: 600; color: #111; }
+    .handbook-section-sub   { font-size: 12px; color: #6b7280; margin-top: 2px; }
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>💸 Add Expense</h1>
 
-  <!-- FORM STATE -->
-  <div id="form-state">
-    <div class="drop-zone" id="dropZone">
-      <div class="dz-icon" id="dzIcon">📎</div>
-      <div class="dz-label" id="dzLabel">Drop receipt here<br>or tap to upload</div>
-      <div class="dz-name" id="dzName"></div>
-    </div>
-    <input type="file" id="fileInput" accept="image/*,.pdf" capture="environment">
+<!-- ── Sidebar ── -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <span>SGG Internal</span>
+    <small>Sebastian Gladstone Gallery</small>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item">
+      <button class="nav-link active" onclick="switchTab('expenses')" id="nav-expenses">
+        <span class="nav-icon">💸</span> Expenses
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="switchTab('exhibition')" id="nav-exhibition">
+        <span class="nav-icon">🖼</span> Exhibition
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="switchTab('operations')" id="nav-operations">
+        <span class="nav-icon">📅</span> Operations
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="switchTab('shipping')" id="nav-shipping">
+        <span class="nav-icon">🚚</span> Shipping
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="switchTab('books')" id="nav-books">
+        <span class="nav-icon">📚</span> Books
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" onclick="switchTab('handbook')" id="nav-handbook">
+        <span class="nav-icon">📖</span> Handbook
+      </button>
+    </li>
+  </ul>
+</nav>
 
-    <div class="loc-label">Location *</div>
-    <div class="loc-row">
-      <button class="loc-btn" id="btn-nyc" onclick="setLoc('NYC')">🗽 NYC</button>
-      <button class="loc-btn" id="btn-la"  onclick="setLoc('LA')">🌴 LA</button>
-    </div>
+<!-- ── Main ── -->
+<main id="main">
 
-    <div class="field">
-      <label>Date *</label>
-      <input type="date" id="date">
-    </div>
-    <div class="field">
-      <label>Vendor</label>
-      <input type="text" id="vendor" placeholder="e.g. Adobe, ADT Security">
-    </div>
-    <div class="field">
-      <label>Amount ($)</label>
-      <input type="number" id="amount" inputmode="decimal" placeholder="0.00" step="0.01" min="0">
-    </div>
-    <div class="field">
-      <label>Category</label>
-      <select id="category">
-        <option value="">Select…</option>
-        <option>Advertising</option>
-        <option>Art Handling</option>
-        <option>Bennet Expense</option>
-        <option>Cleaning</option>
-        <option>Construction</option>
-        <option>Framing</option>
-        <option>General Operation Expense</option>
-        <option>Materials</option>
-        <option>Office Supplies</option>
-        <option>Opening Expenses</option>
-        <option>Photo</option>
-        <option>Production</option>
-        <option>Publishing</option>
-        <option>Security</option>
-        <option>Shipping</option>
-        <option>Show Expense</option>
-        <option>Software</option>
-        <option>Storage</option>
-        <option>Taxes</option>
-        <option>Utilities</option>
-        <option>Vehicle Rental</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Account</label>
-      <select id="account">
-        <option value="">Select…</option>
-        <option>AmEx 1034 - Gold</option>
-        <option>AmEx 1016 _ Plat</option>
-        <option>Amex 1004</option>
-        <option>AmEx 7399</option>
-        <option>AMEX****3252</option>
-        <option>Checking 5560- NY</option>
-        <option>Checking 7129- LA</option>
-        <option>MasterCard9059</option>
-        <option>Visa 6251</option>
-        <option>CC 0129</option>
-        <option>Card 2002</option>
-        <option>Zelle</option>
-        <option>Cash</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Note</label>
-      <input type="text" id="note" placeholder="Optional note">
-    </div>
+  <!-- ══ EXPENSES ══ -->
+  <div class="view active" id="view-expenses">
+    <div class="page-title">💸 Add Expense</div>
+    <div class="card">
+      <div id="form-state">
+        <div class="drop-zone" id="dropZone">
+          <div class="dz-icon" id="dzIcon">📎</div>
+          <div class="dz-label" id="dzLabel">Drop receipt here or click to upload</div>
+          <div class="dz-name" id="dzName"></div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*,.pdf">
 
-    <div class="error-msg" id="errorMsg"></div>
-    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Save Expense →</button>
+        <div class="loc-label">Location *</div>
+        <div class="loc-row">
+          <button class="loc-btn" id="btn-nyc" onclick="setLoc('NYC')">🗽 NYC</button>
+          <button class="loc-btn" id="btn-la"  onclick="setLoc('LA')">🌴 LA</button>
+        </div>
+
+        <div class="field"><label>Date *</label><input type="date" id="date"></div>
+        <div class="field"><label>Vendor</label><input type="text" id="vendor" placeholder="e.g. Adobe, ADT Security"></div>
+        <div class="field"><label>Amount ($)</label><input type="number" id="amount" inputmode="decimal" placeholder="0.00" step="0.01" min="0"></div>
+        <div class="field">
+          <label>Category</label>
+          <select id="category">
+            <option value="">Select…</option>
+            <option>Advertising</option><option>Art Handling</option><option>Bennet Expense</option>
+            <option>Cleaning</option><option>Construction</option><option>Framing</option>
+            <option>General Operation Expense</option><option>Materials</option><option>Office Supplies</option>
+            <option>Opening Expenses</option><option>Photo</option><option>Production</option>
+            <option>Publishing</option><option>Security</option><option>Shipping</option>
+            <option>Show Expense</option><option>Software</option><option>Storage</option>
+            <option>Taxes</option><option>Utilities</option><option>Vehicle Rental</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Account</label>
+          <select id="account">
+            <option value="">Select…</option>
+            <option>AmEx 1034 - Gold</option><option>AmEx 1016 _ Plat</option><option>Amex 1004</option>
+            <option>AmEx 7399</option><option>AMEX****3252</option><option>Checking 5560- NY</option>
+            <option>Checking 7129- LA</option><option>MasterCard9059</option><option>Visa 6251</option>
+            <option>CC 0129</option><option>Card 2002</option><option>Zelle</option><option>Cash</option>
+          </select>
+        </div>
+        <div class="field"><label>Note</label><input type="text" id="note" placeholder="Optional note"></div>
+
+        <div class="error-msg" id="errorMsg"></div>
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Save Expense →</button>
+      </div>
+
+      <div class="loading-state" id="loading-state">
+        <div class="load-spinner"></div>
+        <p>Saving receipt &amp; updating sheet…</p>
+      </div>
+
+      <div class="success-state" id="success-state">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Expense saved!</div>
+        <div class="success-detail" id="successDetail"></div>
+        <a class="success-link" id="successLink" href="#" target="_blank">View receipt in Drive ↗</a><br>
+        <button class="again-btn" onclick="reset()">+ Add Another</button>
+      </div>
+    </div>
   </div>
 
-  <!-- LOADING STATE -->
-  <div id="loading-state">
-    <div class="load-spinner"></div>
-    <p>Saving receipt &amp; updating sheet…</p>
+  <!-- ══ EXHIBITION ══ -->
+  <div class="view" id="view-exhibition">
+    <div class="page-title">🖼 Exhibition Schedule</div>
+    <div class="card">
+      <div class="year-row">
+        <button class="year-btn active" id="m-yr-2026" onclick="setExhYear(2026, this)">2026</button>
+        <button class="year-btn" id="m-yr-2027" onclick="setExhYear(2027, this)">2027</button>
+        <button class="refresh-btn" onclick="refreshExh()">↻ Refresh</button>
+      </div>
+      <div id="exh-body"><div class="exh-spinner"></div></div>
+    </div>
   </div>
 
-  <!-- SUCCESS STATE -->
-  <div id="success-state">
-    <div class="success-icon">✅</div>
-    <div class="success-title">Expense saved!</div>
-    <div class="success-detail" id="successDetail"></div>
-    <a class="success-link" id="successLink" href="#" target="_blank">View receipt in Drive ↗</a><br>
-    <button class="again-btn" onclick="reset()">+ Add Another</button>
+  <!-- ══ OPERATIONS ══ -->
+  <div class="view" id="view-operations">
+    <div class="page-title">📅 Operations</div>
+    <div class="cal-section">
+      <div class="cal-title">
+        <span class="cal-dot cal-dot-nyc"></span>
+        <span style="color:#374151">NYC Calendar</span>
+      </div>
+      <iframe class="cal-frame" title="NYC Operations Calendar"
+        src="https://calendar.google.com/calendar/embed?src=c_2a45070c7ac7165c99809dc722ac4b6a602664bcc9317da9b0ed6dc3c30ea7d1%40group.calendar.google.com&ctz=America%2FNew_York&showNav=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0&mode=AGENDA">
+      </iframe>
+    </div>
+    <div class="cal-section">
+      <div class="cal-title">
+        <span class="cal-dot cal-dot-la"></span>
+        <span style="color:#374151">LA Calendar</span>
+      </div>
+      <iframe class="cal-frame" title="LA Operations Calendar"
+        src="https://calendar.google.com/calendar/embed?src=c_13f57c3abf55bc443c9eb2657908101f78c50f7ffc08dbac8593cadb4706ca16%40group.calendar.google.com&ctz=America%2FLos_Angeles&showNav=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0&mode=AGENDA">
+      </iframe>
+    </div>
   </div>
-</div>
+
+  <!-- ══ SHIPPING & MOVEMENTS ══ -->
+  <div class="view" id="view-shipping">
+    <div class="page-title">🚚 Shipping &amp; Movements</div>
+    <div class="card">
+      <div id="ship-m-form">
+        <div class="loc-label">Direction *</div>
+        <div class="loc-row">
+          <button class="loc-btn" id="m-ship-btn-out"      onclick="mSetShipDir('OUT')">📤 OUT</button>
+          <button class="loc-btn" id="m-ship-btn-in"       onclick="mSetShipDir('IN')">📥 IN</button>
+          <button class="loc-btn" id="m-ship-btn-transfer" onclick="mSetShipDir('TRANSFER')">🔄 Transfer</button>
+        </div>
+
+        <div class="field"><label>Date *</label><input type="date" id="m-ship-date"></div>
+
+        <div class="field">
+          <label>From *</label>
+          <div class="ship-loc-row" id="m-from-btns">
+            <button class="ship-loc-btn" onclick="mSetLoc('from','SGNY',this)">SGNY</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','SGLA',this)">SGLA</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','5523',this)">5523</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','HangmanNY',this)">HangmanNY</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','Private Collection',this)">Private Collection</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','Framer',this)">Framer</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','Artist',this)">Artist</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('from','other',this)">Other…</button>
+          </div>
+          <input type="text" id="m-from-other" style="display:none;margin-top:8px;" placeholder="Enter location…" oninput="mShipLocCustom('from', this.value)">
+        </div>
+
+        <div class="field">
+          <label>To *</label>
+          <div class="ship-loc-row" id="m-to-btns">
+            <button class="ship-loc-btn" onclick="mSetLoc('to','SGNY',this)">SGNY</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','SGLA',this)">SGLA</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','5523',this)">5523</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','HangmanNY',this)">HangmanNY</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','Private Collection',this)">Private Collection</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','Framer',this)">Framer</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','Artist',this)">Artist</button>
+            <button class="ship-loc-btn" onclick="mSetLoc('to','other',this)">Other…</button>
+          </div>
+          <input type="text" id="m-to-other" style="display:none;margin-top:8px;" placeholder="Enter location…" oninput="mShipLocCustom('to', this.value)">
+        </div>
+
+        <div class="field">
+          <label>Via</label>
+          <select id="m-ship-via">
+            <option value="">Select carrier / handler…</option>
+            <optgroup label="Carriers">
+              <option>Hangman</option><option>Art Handlers Ltd</option><option>Crozier</option>
+              <option>Atelier 4</option><option>CRCS</option><option>YSDS</option>
+              <option>UPS</option><option>DHL</option><option>Private Courier</option><option>Will Call</option>
+            </optgroup>
+            <optgroup label="Art Handlers">
+              <option>Chase Wolcott</option><option>Sydney Busic</option>
+              <option>Steven NYC</option><option>Kial Hocker</option>
+            </optgroup>
+            <optgroup label="SG Staff">
+              <option>Sebastian Gladstone</option><option>Dylan Varner</option><option>Stevie Soares</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Artist</label>
+          <select id="m-ship-artist" onchange="mArtistOther(this.value)">
+            <option value="">Select artist…</option>
+            <option>Chad Murray</option><option>Clayton Schiff</option><option>Cosima zu Knyphausen</option>
+            <option>Darya Diamond</option><option>Dustin Hodges</option><option>Emma McMillan</option>
+            <option>Emmanuel Louisnord Desir</option><option>Franne Davids</option><option>G.V. Rodriguez</option>
+            <option>Herman Cherry</option><option>Jiang Chiang</option><option>Malcolm Kenter</option>
+            <option>Melvino Garretti</option><option>Nan Montgomery</option><option>Nevine Mahmoud</option>
+            <option>Nick Angelo</option><option>Nick Hoecker</option><option>Nihura Montiel</option>
+            <option>Timo Fahler</option><option>Tristan Unrau</option>
+            <option value="other">Other…</option>
+          </select>
+          <input type="text" id="m-ship-artist-other" style="display:none;margin-top:8px;" placeholder="Artist name…">
+        </div>
+
+        <div class="field"><label>Title or Number</label><input type="text" id="m-ship-title" placeholder="Artwork title or catalogue number"></div>
+        <div class="field"><label>Notes</label><input type="text" id="m-ship-notes" placeholder="Optional notes"></div>
+
+        <div class="drop-zone" id="m-ship-dz" onclick="document.getElementById('m-ship-file').click()">
+          <div class="dz-icon" id="m-ship-dz-icon">📷</div>
+          <div class="dz-label" id="m-ship-dz-label">Photo (optional) — click to attach</div>
+          <div class="dz-name" id="m-ship-dz-name"></div>
+        </div>
+        <input type="file" id="m-ship-file" accept="image/*,.pdf" onchange="if(this.files[0]) mSetShipFile(this.files[0])">
+
+        <div class="error-msg" id="m-ship-error"></div>
+        <button class="submit-btn" onclick="mSubmitShipping()">Log Movement →</button>
+      </div>
+
+      <div class="loading-state" id="ship-m-loading">
+        <div class="load-spinner"></div>
+        <p>Logging movement…</p>
+      </div>
+
+      <div class="success-state" id="ship-m-success">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Movement logged!</div>
+        <div class="success-detail" id="m-ship-success-detail"></div>
+        <a class="success-link" id="m-ship-success-link" href="#" target="_blank" style="display:none">View photo ↗</a><br>
+        <button class="again-btn" onclick="mResetShipping()">+ Log Another</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOOKS ══ -->
+  <div class="view" id="view-books">
+    <div class="page-title">📚 Book Log</div>
+    <div class="card">
+      <div id="book-form-state">
+        <div class="loc-label">Location *</div>
+        <div class="loc-row">
+          <button class="loc-btn" id="book-btn-nyc" onclick="mSetBookLoc('NYC')">🗽 NYC</button>
+          <button class="loc-btn" id="book-btn-la"  onclick="mSetBookLoc('LA')">🌴 LA</button>
+        </div>
+
+        <div class="field">
+          <label>Book</label>
+          <select id="book-select" onchange="updateBookStockBadge()">
+            <option value="">— select location first —</option>
+          </select>
+        </div>
+        <div id="book-stock-badge"></div>
+
+        <div class="loc-label">Transaction *</div>
+        <div class="loc-row">
+          <button class="loc-btn" id="book-btn-given" onclick="mSetBookTx('Given')">🎁 Given</button>
+          <button class="loc-btn" id="book-btn-sale"  onclick="mSetBookTx('Sale')">💰 Sale</button>
+        </div>
+
+        <div class="field"><label>Client Name</label><input type="text" id="book-client" placeholder="Recipient or buyer"></div>
+        <div class="field"><label>Quantity</label><input type="number" id="book-qty" value="1" min="1"></div>
+        <div id="book-price-wrap" style="display:none">
+          <div class="field"><label>Sale Price ($)</label><input type="number" id="book-price" step="0.01" placeholder="0.00"></div>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="book-date"></div>
+        <div class="field"><label>Notes (optional)</label><textarea id="book-notes" placeholder="Any additional details…"></textarea></div>
+
+        <div class="error-msg" id="book-error"></div>
+        <button class="submit-btn" onclick="submitBookLog()">Log Book</button>
+      </div>
+
+      <div class="loading-state" id="book-loading-state">
+        <div class="load-spinner"></div>
+        <p>Logging book transaction…</p>
+      </div>
+
+      <div class="success-state" id="book-success-state">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Book logged!</div>
+        <div class="success-detail" id="book-success-detail"></div>
+        <button class="again-btn" onclick="resetBookForm()">Log Another</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HANDBOOK ══ -->
+  <div class="view" id="view-handbook">
+    <div class="page-title">📖 Company Handbook</div>
+    <div class="card">
+      <div class="handbook-hero">
+        <div class="handbook-icon">📖</div>
+        <div class="handbook-title">SGG Company Handbook</div>
+        <div class="handbook-sub">Policies, procedures, and everything you need to know about working at Sebastian Gladstone Gallery.</div>
+        <div class="handbook-coming">Coming Soon</div>
+      </div>
+      <div class="handbook-sections">
+        <div class="section-label">Planned Sections</div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">👋</div>
+          <div>
+            <div class="handbook-section-label">Welcome & Culture</div>
+            <div class="handbook-section-sub">Mission, values, and what we stand for</div>
+          </div>
+        </div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">🕐</div>
+          <div>
+            <div class="handbook-section-label">Hours & Scheduling</div>
+            <div class="handbook-section-sub">Gallery hours, shift expectations, time off</div>
+          </div>
+        </div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">💰</div>
+          <div>
+            <div class="handbook-section-label">Compensation & Benefits</div>
+            <div class="handbook-section-sub">Pay schedules, reimbursements, perks</div>
+          </div>
+        </div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">🎨</div>
+          <div>
+            <div class="handbook-section-label">Gallery Operations</div>
+            <div class="handbook-section-sub">Artwork handling, installation, exhibition setup</div>
+          </div>
+        </div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">📞</div>
+          <div>
+            <div class="handbook-section-label">Client Relations</div>
+            <div class="handbook-section-sub">Collector communication, inquiry protocols</div>
+          </div>
+        </div>
+        <div class="handbook-section-item">
+          <div class="handbook-section-icon">📋</div>
+          <div>
+            <div class="handbook-section-label">Policies & Conduct</div>
+            <div class="handbook-section-sub">Confidentiality, social media, professional standards</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
 
 <script>
+  const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbz1P-npzwQOt29cRu-uSh6VyZitHD8vWaCQnXtlnSDbUU44t47Y4pU-wbZqdKNyzaSl5g/exec';
+  const SCRIPT_URL_EXH = SCRIPT_URL;
+
+  // ── Expense state ──
   let file = null;
   let loc  = null;
 
-  // Auto-fill today's date
+  // ── Exhibition state ──
+  let exhCache = {}, exhCacheTime = {};
+  const EXH_TTL = 5 * 60 * 1000;
+  let currentExhYear = 2026;
+
+  // ── Shipping state ──
+  let mShipState = { file: null, direction: null, from: null, to: null };
+
+  // ── Book state ──
+  let bookState = { loc: null, txType: null, loaded: false, books: [] };
+
+  // ── Auto-fill today's date ──
   (function() {
     const d  = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
     const dd = String(d.getDate()).padStart(2,'0');
-    document.getElementById('date').value = d.getFullYear() + '-' + mm + '-' + dd;
+    const today = d.getFullYear() + '-' + mm + '-' + dd;
+    document.getElementById('date').value       = today;
+    document.getElementById('m-ship-date').value = today;
+    document.getElementById('book-date').value   = today;
   })();
 
-  // ── File handling ──
+  // ── Tab switching ──
+  function switchTab(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name === 'exhibition') loadExh();
+  }
+
+  // ══════════════════════════════════════════
+  // EXPENSES
+  // ══════════════════════════════════════════
   const dropZone  = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
 
   dropZone.addEventListener('click', () => fileInput.click());
-
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave',   () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
@@ -289,26 +800,23 @@
     document.getElementById('dzName').textContent  = f.name;
   }
 
-  // ── Location ──
   function setLoc(l) {
     loc = l;
-    document.getElementById('btn-nyc').className = 'loc-btn' + (l === 'NYC' ? ' sel-nyc' : '');
-    document.getElementById('btn-la').className  = 'loc-btn' + (l === 'LA'  ? ' sel-la'  : '');
+    document.getElementById('btn-nyc').className = 'loc-btn' + (l==='NYC' ? ' sel-nyc' : '');
+    document.getElementById('btn-la').className  = 'loc-btn' + (l==='LA'  ? ' sel-la'  : '');
   }
 
-  // ── Submit ──
   function handleSubmit() {
     hideError();
     if (!file) { showError('Please attach a receipt first.'); return; }
     if (!loc)  { showError('Please choose a location (NYC or LA).'); return; }
     if (!document.getElementById('date').value) { showError('Date is required.'); return; }
-
+    document.getElementById('submitBtn').disabled = true;
     const reader = new FileReader();
     reader.onload = function(e) {
       const b64 = e.target.result.split(',')[1];
       const payload = {
-        fileData: b64,
-        fileName: file.name,
+        fileData: b64, fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         location: loc,
         date:     document.getElementById('date').value,
@@ -319,18 +827,16 @@
         note:     document.getElementById('note').value.trim(),
       };
       show('loading-state');
-      google.script.run
-        .withSuccessHandler(onSuccess)
-        .withFailureHandler(onError)
-        .submitExpense(payload);
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+        .then(r => r.json()).then(onSuccess).catch(onError);
     };
     reader.readAsDataURL(file);
   }
 
   function onSuccess(res) {
+    document.getElementById('submitBtn').disabled = false;
     if (res.success) {
-      document.getElementById('successDetail').textContent =
-        'Filed in: ' + res.folder;
+      document.getElementById('successDetail').textContent = 'Filed in: ' + res.folder;
       document.getElementById('successLink').href = res.fileUrl;
       show('success-state');
     } else {
@@ -340,30 +846,24 @@
   }
 
   function onError(err) {
+    document.getElementById('submitBtn').disabled = false;
     show('form-state');
     showError(err.message || 'Unexpected error. Please try again.');
   }
 
-  // ── Helpers ──
   function show(id) {
     ['form-state','loading-state','success-state'].forEach(s =>
       document.getElementById(s).style.display = s === id ? 'block' : 'none');
   }
-  function showError(msg) {
-    const el = document.getElementById('errorMsg');
-    el.textContent = msg;
-    el.style.display = 'block';
-  }
-  function hideError() {
-    document.getElementById('errorMsg').style.display = 'none';
-  }
+  function showError(msg) { const el = document.getElementById('errorMsg'); el.textContent = msg; el.style.display = 'block'; }
+  function hideError()    { document.getElementById('errorMsg').style.display = 'none'; }
 
   function reset() {
     file = null; loc = null;
     document.getElementById('dropZone').className = 'drop-zone';
-    document.getElementById('dzIcon').textContent  = '📎';
-    document.getElementById('dzLabel').innerHTML   = 'Drop receipt here<br>or tap to upload';
-    document.getElementById('dzName').textContent  = '';
+    document.getElementById('dzIcon').textContent   = '📎';
+    document.getElementById('dzLabel').innerHTML    = 'Drop receipt here or click to upload';
+    document.getElementById('dzName').textContent   = '';
     document.getElementById('vendor').value   = '';
     document.getElementById('amount').value   = '';
     document.getElementById('category').value = '';
@@ -372,10 +872,326 @@
     document.getElementById('btn-nyc').className = 'loc-btn';
     document.getElementById('btn-la').className  = 'loc-btn';
     const d  = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
     const dd = String(d.getDate()).padStart(2,'0');
     document.getElementById('date').value = d.getFullYear() + '-' + mm + '-' + dd;
     show('form-state');
+  }
+
+  // ══════════════════════════════════════════
+  // EXHIBITION
+  // ══════════════════════════════════════════
+  function setExhYear(year, btn) {
+    currentExhYear = year;
+    document.querySelectorAll('.year-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadExh();
+  }
+
+  function refreshExh() {
+    exhCache[currentExhYear]     = null;
+    exhCacheTime[currentExhYear] = null;
+    loadExh();
+  }
+
+  function loadExh() {
+    const yr  = currentExhYear;
+    const now = Date.now();
+    if (exhCache[yr] && exhCacheTime[yr] && (now - exhCacheTime[yr] < EXH_TTL)) {
+      renderExh(yr); return;
+    }
+    document.getElementById('exh-body').innerHTML = '<div class="exh-spinner"></div>';
+    fetch(SCRIPT_URL_EXH + '?action=gallery&year=' + yr + '&t=' + now)
+      .then(r => r.json())
+      .then(data => {
+        exhCache[yr]     = data;
+        exhCacheTime[yr] = Date.now();
+        renderExh(yr);
+      })
+      .catch(() => {
+        document.getElementById('exh-body').innerHTML = '<div class="exh-empty">Failed to load schedule.</div>';
+      });
+  }
+
+  function renderExh(yr) {
+    const data = exhCache[yr];
+    if (!data || data.error) { document.getElementById('exh-body').innerHTML = '<div class="exh-empty">No data available.</div>'; return; }
+    let html = '';
+    ['nyc','la'].forEach(city => {
+      const list = data[city] || [];
+      html += '<div class="exh-section"><div class="exh-city-title">' + city.toUpperCase() + '</div>';
+      if (!list.length) {
+        html += '<div class="exh-empty">No shows listed</div>';
+      } else {
+        list.forEach(s => {
+          html += '<div class="exh-item"><div class="exh-show">' + s.show + '</div>';
+          if (s.dates) html += '<div class="exh-dates">' + s.dates + '</div>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+    });
+    document.getElementById('exh-body').innerHTML = html;
+  }
+
+  // ══════════════════════════════════════════
+  // SHIPPING & MOVEMENTS
+  // ══════════════════════════════════════════
+  function mSetShipDir(dir) {
+    mShipState.direction = dir;
+    document.getElementById('m-ship-btn-out').className      = 'loc-btn' + (dir==='OUT'      ? ' sel-nyc' : '');
+    document.getElementById('m-ship-btn-in').className       = 'loc-btn' + (dir==='IN'       ? ' sel-la'  : '');
+    document.getElementById('m-ship-btn-transfer').className = 'loc-btn' + (dir==='TRANSFER' ? ' sel-nyc' : '');
+  }
+
+  function mSetLoc(side, val, btn) {
+    mShipState[side] = val === 'other' ? '' : val;
+    const container = document.getElementById('m-' + side + '-btns');
+    container.querySelectorAll('.ship-loc-btn').forEach(b => b.className = 'ship-loc-btn');
+    btn.className = 'ship-loc-btn sel-nyc';
+    const otherInput = document.getElementById('m-' + side + '-other');
+    if (val === 'other') {
+      otherInput.style.display = 'block';
+      otherInput.value = '';
+      otherInput.focus();
+    } else {
+      otherInput.style.display = 'none';
+    }
+  }
+
+  function mShipLocCustom(side, val) { mShipState[side] = val; }
+
+  function mArtistOther(val) {
+    document.getElementById('m-ship-artist-other').style.display = val === 'other' ? 'block' : 'none';
+  }
+
+  function mSetShipFile(f) {
+    mShipState.file = f;
+    document.getElementById('m-ship-dz').classList.add('has-file');
+    document.getElementById('m-ship-dz-icon').textContent  = '📄';
+    document.getElementById('m-ship-dz-label').textContent = 'Photo attached';
+    document.getElementById('m-ship-dz-name').textContent  = f.name;
+  }
+
+  function shipShow(id) {
+    ['ship-m-form','ship-m-loading','ship-m-success'].forEach(s =>
+      document.getElementById(s).style.display = s === id ? 'block' : 'none');
+  }
+
+  function mSubmitShipping() {
+    const errEl = document.getElementById('m-ship-error');
+    errEl.style.display = 'none';
+
+    if (!mShipState.direction) { errEl.textContent = 'Please select a direction (IN / OUT / Transfer).'; errEl.style.display = 'block'; return; }
+    if (!document.getElementById('m-ship-date').value) { errEl.textContent = 'Date is required.'; errEl.style.display = 'block'; return; }
+    if (!mShipState.from) { errEl.textContent = 'Please select a From location.'; errEl.style.display = 'block'; return; }
+    if (!mShipState.to)   { errEl.textContent = 'Please select a To location.';   errEl.style.display = 'block'; return; }
+
+    const artistSel = document.getElementById('m-ship-artist').value;
+    const artist    = artistSel === 'other'
+      ? document.getElementById('m-ship-artist-other').value.trim()
+      : artistSel;
+
+    const basePayload = {
+      type:      'shipping',
+      direction: mShipState.direction,
+      date:      document.getElementById('m-ship-date').value,
+      artist:    artist,
+      artwork:   document.getElementById('m-ship-title').value.trim(),
+      from:      mShipState.from,
+      via:       document.getElementById('m-ship-via').value,
+      to:        mShipState.to,
+      notes:     document.getElementById('m-ship-notes').value.trim(),
+    };
+
+    shipShow('ship-m-loading');
+
+    if (mShipState.file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const b64 = e.target.result.split(',')[1];
+        const payload = Object.assign({}, basePayload, {
+          fileData: b64,
+          fileName: mShipState.file.name,
+          mimeType: mShipState.file.type || 'image/jpeg',
+        });
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+          .then(r => r.json()).then(mShipSuccess).catch(mShipError);
+      };
+      reader.readAsDataURL(mShipState.file);
+    } else {
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(basePayload) })
+        .then(r => r.json()).then(mShipSuccess).catch(mShipError);
+    }
+  }
+
+  function mShipSuccess(res) {
+    if (res.success) {
+      document.getElementById('m-ship-success-detail').textContent = 'Logged to: ' + (res.folder || 'Shipping Log');
+      const link = document.getElementById('m-ship-success-link');
+      if (res.fileUrl) { link.href = res.fileUrl; link.style.display = 'inline-block'; }
+      else { link.style.display = 'none'; }
+      shipShow('ship-m-success');
+    } else {
+      shipShow('ship-m-form');
+      const errEl = document.getElementById('m-ship-error');
+      errEl.textContent = res.error || 'Something went wrong.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  function mShipError(err) {
+    shipShow('ship-m-form');
+    const errEl = document.getElementById('m-ship-error');
+    errEl.textContent = err.message || 'Unexpected error.';
+    errEl.style.display = 'block';
+  }
+
+  function mResetShipping() {
+    mShipState = { file: null, direction: null, from: null, to: null };
+    ['m-ship-btn-out','m-ship-btn-in','m-ship-btn-transfer'].forEach(id =>
+      document.getElementById(id).className = 'loc-btn');
+    ['m-from-btns','m-to-btns'].forEach(id =>
+      document.getElementById(id).querySelectorAll('.ship-loc-btn').forEach(b => b.className = 'ship-loc-btn'));
+    ['m-from-other','m-to-other','m-ship-artist-other'].forEach(id => {
+      const el = document.getElementById(id);
+      el.style.display = 'none'; el.value = '';
+    });
+    document.getElementById('m-ship-via').value    = '';
+    document.getElementById('m-ship-artist').value = '';
+    document.getElementById('m-ship-title').value  = '';
+    document.getElementById('m-ship-notes').value  = '';
+    document.getElementById('m-ship-dz').classList.remove('has-file');
+    document.getElementById('m-ship-dz-icon').textContent  = '📷';
+    document.getElementById('m-ship-dz-label').textContent = 'Photo (optional) — click to attach';
+    document.getElementById('m-ship-dz-name').textContent  = '';
+    document.getElementById('m-ship-error').style.display  = 'none';
+    const d  = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById('m-ship-date').value = d.getFullYear() + '-' + mm + '-' + dd;
+    shipShow('ship-m-form');
+  }
+
+  // ══════════════════════════════════════════
+  // BOOKS
+  // ══════════════════════════════════════════
+  function mSetBookLoc(l) {
+    bookState.loc = l;
+    document.getElementById('book-btn-nyc').className = 'loc-btn' + (l==='NYC' ? ' sel-nyc' : '');
+    document.getElementById('book-btn-la').className  = 'loc-btn' + (l==='LA'  ? ' sel-la'  : '');
+    if (!bookState.loaded) loadBookInventory();
+    else updateBookStockBadge();
+  }
+
+  function mSetBookTx(t) {
+    bookState.txType = t;
+    document.getElementById('book-btn-given').className = 'loc-btn' + (t==='Given' ? ' sel-la'  : '');
+    document.getElementById('book-btn-sale').className  = 'loc-btn' + (t==='Sale'  ? ' sel-nyc' : '');
+    document.getElementById('book-price-wrap').style.display = t === 'Sale' ? 'block' : 'none';
+  }
+
+  function loadBookInventory() {
+    const sel = document.getElementById('book-select');
+    sel.innerHTML = '<option value="">— loading books… —</option>';
+    fetch(SCRIPT_URL + '?action=books&t=' + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        bookState.books  = data.books || [];
+        bookState.loaded = true;
+        sel.innerHTML = '<option value="">Select a book…</option>';
+        bookState.books.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b.title;
+          opt.textContent = b.title;
+          sel.appendChild(opt);
+        });
+        updateBookStockBadge();
+      })
+      .catch(() => {
+        sel.innerHTML = '<option value="">— failed to load —</option>';
+      });
+  }
+
+  function updateBookStockBadge() {
+    const badge = document.getElementById('book-stock-badge');
+    const title = document.getElementById('book-select').value;
+    if (!title || !bookState.books.length) { badge.style.display = 'none'; return; }
+    const book = bookState.books.find(b => b.title === title);
+    if (!book) { badge.style.display = 'none'; return; }
+    const locStock = bookState.loc === 'LA' ? book.la : book.nyc;
+    badge.style.display = 'block';
+    badge.textContent = (bookState.loc || '?') + ' stock: ' + locStock + ' · Total: ' + (book.nyc + book.la);
+  }
+
+  function bookShowState(id) {
+    ['book-form-state','book-loading-state','book-success-state'].forEach(s =>
+      document.getElementById(s).style.display = s === id ? 'block' : 'none');
+  }
+
+  function submitBookLog() {
+    const errEl = document.getElementById('book-error');
+    errEl.style.display = 'none';
+
+    if (!bookState.loc)    { errEl.textContent = 'Please select a location.';      errEl.style.display = 'block'; return; }
+    if (!document.getElementById('book-select').value) { errEl.textContent = 'Please select a book.'; errEl.style.display = 'block'; return; }
+    if (!bookState.txType) { errEl.textContent = 'Please select a transaction type.'; errEl.style.display = 'block'; return; }
+
+    const payload = {
+      type:     'book_log',
+      location: bookState.loc,
+      book:     document.getElementById('book-select').value,
+      txType:   bookState.txType,
+      client:   document.getElementById('book-client').value.trim(),
+      qty:      document.getElementById('book-qty').value || 1,
+      price:    document.getElementById('book-price').value,
+      date:     document.getElementById('book-date').value,
+      notes:    document.getElementById('book-notes').value.trim(),
+    };
+
+    bookShowState('book-loading-state');
+    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          document.getElementById('book-success-detail').textContent =
+            (payload.book || '') + ' · ' + (bookState.loc||'') + ' · Stock now: ' + (res.newStock ?? '—');
+          bookShowState('book-success-state');
+          // Update local stock cache
+          const book = bookState.books.find(b => b.title === payload.book);
+          if (book) {
+            if (bookState.loc === 'LA') book.la = res.newStock;
+            else book.nyc = res.newStock;
+          }
+        } else {
+          bookShowState('book-form-state');
+          errEl.textContent = res.error || 'Something went wrong.';
+          errEl.style.display = 'block';
+        }
+      })
+      .catch(err => {
+        bookShowState('book-form-state');
+        errEl.textContent = err.message || 'Unexpected error.';
+        errEl.style.display = 'block';
+      });
+  }
+
+  function resetBookForm() {
+    bookState.txType = null;
+    document.getElementById('book-btn-given').className = 'loc-btn';
+    document.getElementById('book-btn-sale').className  = 'loc-btn';
+    document.getElementById('book-client').value = '';
+    document.getElementById('book-qty').value    = '1';
+    document.getElementById('book-price').value  = '';
+    document.getElementById('book-notes').value  = '';
+    document.getElementById('book-price-wrap').style.display = 'none';
+    document.getElementById('book-error').style.display      = 'none';
+    const d  = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    document.getElementById('book-date').value = d.getFullYear() + '-' + mm + '-' + dd;
+    loadBookInventory();
+    bookShowState('book-form-state');
   }
 </script>
 </body>
