@@ -1968,9 +1968,15 @@
       +'</div>'
       +svg
       +legendHtml
-      +'<div style="display:flex;justify-content:space-between;margin-top:20px;padding-bottom:4px;border-bottom:1px solid #555;">'
-      +'<div style="font-size:11px;font-weight:700;color:#333;">Signature</div>'
-      +'<div style="font-size:11px;font-weight:700;color:#333;">Date</div>'
+      +'<div style="display:flex;justify-content:space-between;margin-top:20px;gap:40px;">'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:10px;color:#888;margin-bottom:6px;">Signature</div>'
+      +'<div style="font-size:13px;font-weight:600;padding-bottom:4px;border-bottom:1px solid #555;min-height:28px;">'+(data.signedBy||'')+'</div>'
+      +'</div>'
+      +'<div style="flex:1;">'
+      +'<div style="font-size:10px;color:#888;margin-bottom:6px;">Date</div>'
+      +'<div style="font-size:13px;padding-bottom:4px;border-bottom:1px solid #555;min-height:28px;">'+(data.sigDate||'')+'</div>'
+      +'</div>'
       +'</div>';
 
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+pageStyle+'</style></head><body>'+page1+page2+'</body></html>';
