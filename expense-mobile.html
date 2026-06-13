@@ -1880,16 +1880,16 @@
     const photoSlots = ['front','back','top-left','top-right','bottom-left','bottom-right','detail-1','detail-2'];
     const cells = photoSlots.map(function(key) {
       const p = crPhotos[key];
-      if (!p) return '<div style="height:130px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>';
-      return '<div style="height:130px;border:1px solid #bbb;overflow:hidden;">'
+      if (!p) return '<div style="height:110px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>';
+      return '<div style="height:110px;border:1px solid #bbb;overflow:hidden;">'
         + '<img src="' + p.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
         + '</div>';
     });
     // 9th slot: signature photo
     const sigData = crPhotos['thumbnail'];
     cells.push(sigData
-      ? '<div style="height:130px;border:1px solid #bbb;overflow:hidden;"><img src="' + sigData.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
-      : '<div style="height:130px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>'
+      ? '<div style="height:110px;border:1px solid #bbb;overflow:hidden;"><img src="' + sigData.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
+      : '<div style="height:110px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>'
     );
     const photosGrid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">' + cells.join('') + '</div>';
 
@@ -2020,10 +2020,11 @@
       };
       const html = buildCRHtmlMobile(formData, photoUrls);
       const pdfBlob = await html2pdf().set({
-        margin: [0.75,0.75], filename: stockNum+'_CR.pdf',
+        margin: [0.5, 0.75, 0.75, 0.75], filename: stockNum+'_CR.pdf',
         image: { type:'jpeg', quality:0.82 },
         html2canvas: { scale:1.5, useCORS:true, logging:false },
-        jsPDF: { unit:'in', format:'letter', orientation:'portrait' }
+        jsPDF: { unit:'in', format:'letter', orientation:'portrait' },
+        pagebreak: { before: '.pb', avoid: ['img','div'] }
       }).from(html).outputPdf('blob');
 
       const pdfBase64 = await new Promise(function(resolve) {
