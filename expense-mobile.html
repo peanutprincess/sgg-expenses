@@ -1867,33 +1867,28 @@
   function buildCRHtmlMobile(data, photoUrls) {
     const conditionLabels = ['Excellent','Good','Fair','Poor'];
     const condBoxes = conditionLabels.map(l =>
-      '<span style="margin-right:20px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
+      '<span style="margin-right:18px;font-size:11px;">' + (data.condition === l ? '&#9745;' : '&#9744;') + ' ' + l + '</span>'
     ).join('');
 
-    // ── Thumbnail — top-right square ──
+    // ── Thumbnail — top-right, square ──
     const thumbData = crPhotos['thumbnail'];
     const thumbHtml = thumbData
-      ? '<img src="' + thumbData.dataUrl + '" style="width:155px;height:155px;object-fit:contain;border:1px solid #ccc;display:block;">'
-      : '<div style="width:155px;height:155px;background:#d0d0d0;border:1px solid #ccc;"></div>';
+      ? '<img src="' + thumbData.dataUrl + '" style="width:140px;height:140px;object-fit:cover;border:1px solid #ddd;display:block;">'
+      : '<div style="width:140px;height:140px;background:#e0e0e0;border:1px solid #ddd;"></div>';
 
-    // ── Photo grid: 3×3 square cells, fixed 160px height so page 1 never overflows ──
+    // ── Photo grid: 3×3, 145px tall — fits page 1 without overflow ──
     const photoSlots = ['front','back','top-left','top-right','bottom-left','bottom-right','detail-1','detail-2'];
-    const cells = photoSlots.map(function(key) {
-      const p = crPhotos[key];
-      if (!p) return '<div style="height:110px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>';
-      return '<div style="height:110px;border:1px solid #bbb;overflow:hidden;">'
-        + '<img src="' + p.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
-        + '</div>';
-    });
-    // 9th slot: signature photo
-    const sigData = crPhotos['thumbnail'];
-    cells.push(sigData
-      ? '<div style="height:110px;border:1px solid #bbb;overflow:hidden;"><img src="' + sigData.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
-      : '<div style="height:110px;background:#d0d0d0;border:1px solid #bbb;overflow:hidden;"></div>'
-    );
-    const photosGrid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;">' + cells.join('') + '</div>';
+    const makeCell = function(p) {
+      const inner = p
+        ? '<img src="' + p.dataUrl + '" style="width:100%;height:100%;object-fit:cover;display:block;">'
+        : '<div style="width:100%;height:100%;background:#e0e0e0;"></div>';
+      return '<div style="height:145px;border:1px solid #ddd;overflow:hidden;">' + inner + '</div>';
+    };
+    const cells = photoSlots.map(function(key){ return makeCell(crPhotos[key]); });
+    cells.push(makeCell(crPhotos['thumbnail'])); // 9th slot
+    const photosGrid = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;">' + cells.join('') + '</div>';
 
-    // ── SVG diagram — SQUARE viewBox so circle never distorts ──
+    // ── SVG diagram — square wrapper div with border, SVG fills it exactly ──
     const svgSize = 540, cellSz = 18, gridN = Math.floor(svgSize / cellSz);
     let gl = '';
     for(let c=0;c<=gridN;c++){const x=c*cellSz;gl+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgSize+'" stroke="#ccc" stroke-width="0.5"/>';}
@@ -1905,13 +1900,17 @@
       markersSvg+='<circle cx="'+px+'" cy="'+py+'" r="12" fill="#ef4444" opacity="0.9"/>';
       markersSvg+='<text x="'+px+'" y="'+(py+4)+'" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">'+pt.n+'</text>';
     });
-    const svg='<svg viewBox="0 0 '+svgSize+' '+svgSize+'" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;max-height:680px;border:1px solid #bbb;">'
+    // Border on the wrapper div, not the SVG — prevents oversized box bug
+    const svg =
+      '<div style="width:580px;height:580px;margin:0 auto;border:1px solid #bbb;overflow:hidden;">'
+      +'<svg viewBox="0 0 '+svgSize+' '+svgSize+'" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:100%;">'
       +'<rect width="'+svgSize+'" height="'+svgSize+'" fill="white"/>'+gl
-      +'<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="#555" stroke-width="1.5"/>'+markersSvg+'</svg>';
+      +'<circle cx="'+cx+'" cy="'+cy+'" r="'+radius+'" fill="none" stroke="#555" stroke-width="1.5"/>'+markersSvg
+      +'</svg></div>';
 
     let legendHtml='';
     if((data.damagePoints||[]).length){
-      legendHtml='<div style="margin-top:10px;font-size:10px;color:#444;display:flex;flex-wrap:wrap;gap:10px;">'
+      legendHtml='<div style="margin-top:10px;font-size:10px;color:#444;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">'
         +data.damagePoints.map(function(pt){
           return '<span style="display:flex;align-items:center;gap:4px;">'
             +'<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#ef4444;color:#fff;font-size:8px;font-weight:700;">'+pt.n+'</span>'
@@ -1919,28 +1918,33 @@
         }).join('')+'</div>';
     }
 
-    const fr = function(label,val){ return '<div style="display:flex;padding:5px 0;min-height:24px;align-items:flex-start;"><div style="width:200px;flex-shrink:0;font-size:10px;font-weight:700;color:#555;padding-right:12px;line-height:1.5;">'+label+'</div><div style="flex:1;font-size:11px;color:#111;line-height:1.5;border-bottom:1px solid #ccc;padding-bottom:2px;">'+(val||'')+'</div></div>'; };
-    const doubleRule = '<div style="margin:10px 0;"><div style="border-top:1px solid #555;"></div><div style="border-top:1px solid #555;margin-top:3px;"></div></div>';
+    const fr = function(label, val) {
+      return '<div style="display:flex;align-items:baseline;padding:5px 0;border-bottom:1px solid #e8e8e8;">'
+        +'<div style="width:195px;flex-shrink:0;font-size:10px;color:#888;font-style:italic;padding-right:12px;line-height:1.5;">'+label+'</div>'
+        +'<div style="flex:1;font-size:11px;color:#111;line-height:1.5;">'+(val||'')+'</div>'
+        +'</div>';
+    };
+    const doubleRule = '<div style="margin:8px 0 10px;"><div style="border-top:1px solid #aaa;"></div><div style="border-top:1px solid #aaa;margin-top:3px;"></div></div>';
     const dimsStr = [data.dimH?data.dimH+'"H':'',data.dimW?data.dimW+'"W':'',data.dimD?data.dimD+'"D':''].filter(Boolean).join(' × ');
 
     const pageStyle = '@page{size:8.5in 11in;margin:0.5in 0.75in 0.75in 0.75in;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:12px;color:#111;background:#fff;}.pb{page-break-after:always;break-after:page;}';
 
-    // ── PAGE 1: info + photos ──
+    // ── PAGE 1 ──
     const page1 =
-       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">'
-      +'<div style="flex:1;padding-right:24px;">'
-      +'<div style="font-size:18px;font-weight:700;margin-bottom:2px;">Condition Report</div>'
-      +'<div style="font-size:13px;margin-bottom:8px;">Sebastian Gladstone</div>'
-      +'<div style="font-size:10px;font-weight:700;color:#555;margin-bottom:8px;">'
-      +'<span>Date:</span>&nbsp;<span style="font-weight:400;">'+(data.date||'')+'</span>'
-      +(data.location?'&nbsp;&nbsp;&nbsp;&nbsp;<span>Location:</span>&nbsp;<span style="font-weight:400;">'+data.location+'</span>':'')
+       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+      +'<div style="flex:1;padding-right:20px;">'
+      +'<div style="font-size:17px;font-weight:700;letter-spacing:-0.01em;margin-bottom:1px;">Condition Report</div>'
+      +'<div style="font-size:12px;color:#444;margin-bottom:6px;">Sebastian Gladstone</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:6px;">'
+      +'<span style="color:#555;font-weight:600;">Date:</span> '+(data.date||'')
+      +(data.location?' &nbsp; <span style="color:#555;font-weight:600;">Location:</span> '+data.location:'')
       +'</div>'
-      +'<div style="font-size:10px;font-weight:700;color:#555;margin-bottom:6px;">Artwork</div>'
-      +'<div style="padding-left:100px;line-height:1.6;">'
+      +'<div style="font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;">Artwork</div>'
+      +'<div style="padding-left:90px;line-height:1.5;">'
       +'<div style="font-weight:700;font-size:12px;">'+(data.artist||'')+'</div>'
-      +'<div style="font-size:12px;"><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'</div>'
-      +(data.medium?'<div style="font-weight:700;font-size:12px;">'+data.medium+'</div>':'')
-      +(dimsStr?'<div style="font-size:12px;">'+dimsStr+'</div>':'')
+      +'<div style="font-size:11px;color:#333;"><em>'+(data.title||'')+'</em>'+(data.year?', '+data.year:'')+'</div>'
+      +(data.medium?'<div style="font-size:11px;color:#333;">'+data.medium+'</div>':'')
+      +(dimsStr?'<div style="font-size:11px;color:#333;">'+dimsStr+'</div>':'')
       +'</div></div>'
       +'<div style="flex-shrink:0;">'+thumbHtml+'</div>'
       +'</div>'
@@ -1950,22 +1954,23 @@
       +(data.inscription?fr('Inscription information',(data.inscription||'').replace(/\n/g,'<br>')):'')
       +(data.frame?fr('Frame condition and dimensions',(data.frame||'').replace(/\n/g,'<br>')):'')
       +doubleRule
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">Photographs</div>'
+      +'<div style="font-size:10px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Photographs</div>'
       +photosGrid
       +'<div class="pb"></div>';
 
-    // ── PAGE 2: diagram + sign-off ──
+    // ── PAGE 2 ──
     const page2 =
-       '<div style="font-size:14px;font-weight:700;margin-bottom:8px;">Condition Diagrahm</div>'
-      +'<div style="font-size:10px;color:#555;line-height:1.9;margin-bottom:14px;">'
+       '<div style="font-size:13px;font-weight:700;margin-bottom:6px;">Condition Diagrahm</div>'
+      +'<div style="font-size:10px;color:#777;line-height:1.8;margin-bottom:14px;">'
       +'<div>&#9900; Chip &nbsp;&nbsp;&nbsp; &#10003; Dent &nbsp;&nbsp;&nbsp; &#8212; Scratches</div>'
       +'<div>&#9900; Scuffs &nbsp;&nbsp;&nbsp; //// Cracks &nbsp;&nbsp;&nbsp; = Part missing</div>'
       +'<div>&#8960; Stains &nbsp;&nbsp;&nbsp; &#215; Paint loss &nbsp;&nbsp;&nbsp; &#8743; Tear &nbsp;&nbsp;&nbsp; &#8745;&#8745; Crease</div>'
       +'</div>'
-      +svg+legendHtml
-      +'<div style="display:flex;justify-content:space-between;margin-top:16px;padding-bottom:4px;border-bottom:1px solid #555;">'
-      +'<div style="font-size:12px;font-weight:700;">Signature</div>'
-      +'<div style="font-size:12px;font-weight:700;">Date</div>'
+      +svg
+      +legendHtml
+      +'<div style="display:flex;justify-content:space-between;margin-top:20px;padding-bottom:4px;border-bottom:1px solid #555;">'
+      +'<div style="font-size:11px;font-weight:700;color:#333;">Signature</div>'
+      +'<div style="font-size:11px;font-weight:700;color:#333;">Date</div>'
       +'</div>';
 
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+pageStyle+'</style></head><body>'+page1+page2+'</body></html>';
