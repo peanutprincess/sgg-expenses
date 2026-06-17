@@ -64,6 +64,9 @@ function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'contractors') {
     return serveContractors();
   }
+  if (e && e.parameter && e.parameter.action === 'ic') {
+    return serveIC();
+  }
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('SGG Expenses')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -1065,6 +1068,19 @@ function submitSignaturesUpdate(data) {
   } catch(err) {
     logToSheet('SIGNATURES ERR: ' + err.toString());
     return { success: false, error: err.toString() };
+  }
+}
+
+function serveIC() {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheets().find(s => s.getSheetId() === 49023683);
+    if (!sheet) return ContentService.createTextOutput(JSON.stringify({ contacts: [] })).setMimeType(ContentService.MimeType.JSON);
+    const data     = sheet.getDataRange().getValues();
+    const contacts = data.slice(1).map(r => ({ name: String(r[0]||'').trim(), type: String(r[1]||'').trim(), number: String(r[2]||'').trim() })).filter(c => c.name);
+    return ContentService.createTextOutput(JSON.stringify({ contacts })).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.toString(), contacts: [] })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
