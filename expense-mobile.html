@@ -1019,6 +1019,14 @@
   </div>
 </div>
 
+<!-- IC Contacts View -->
+<div id="view-ic" class="view">
+  <h1 style="font-size:20px;font-weight:700;color:#111;margin-bottom:20px;">Internal Contacts</h1>
+  <div id="ic-mobile-list" style="display:flex;flex-direction:column;gap:10px;">
+    <div style="color:#9ca3af;font-size:14px;">Loading...</div>
+  </div>
+</div>
+
 <!-- Tab Bar -->
 <div class="tab-bar">
   <div class="tab-item active" id="tab-expenses" onclick="switchTab('expenses')">
@@ -1070,6 +1078,12 @@
       <path d="M9 7h6M9 11h6M9 15h4"/>
     </svg>
     Log
+  </div>
+  <div class="tab-item" id="tab-ic" onclick="switchTab('ic')">
+    <svg class="tab-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6.75 6.75a5.25 5.25 0 1110.5 0 5.25 5.25 0 01-10.5 0zM3 21a9 9 0 0118 0"/>
+    </svg>
+    IC
   </div>
 </div>
 
@@ -1174,7 +1188,31 @@
     if (name === 'exhibition') { if (!exhCache[currentExhYear] || Date.now() - (exhCacheTime[currentExhYear] || 0) >= EXH_TTL) loadExh(); else renderExh(currentExhYear); }
     if (name === 'books')     { if (!bookState.loaded) loadBookInventory(); }
     if (name === 'logistics') { mlLoad(mlState.loc); }
+    if (name === 'ic') { loadICContacts(); }
     window.scrollTo(0, 0);
+  }
+
+  // ── IC Contacts ──
+  function loadICContacts() {
+    const list = document.getElementById('ic-mobile-list');
+    list.innerHTML = '<div style="color:#9ca3af;font-size:14px;">Loading...</div>';
+    fetch(SCRIPT_URL + '?action=ic&t=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        if (!d.contacts || !d.contacts.length) {
+          list.innerHTML = '<div style="color:#9ca3af;font-size:14px;">No contacts found.</div>';
+          return;
+        }
+        list.innerHTML = d.contacts.map(c => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:#f9fafb;border:1px solid #f0f1f3;">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:#111;">${c.name}</div>
+              ${c.type ? `<div style="font-size:12px;color:#9ca3af;margin-top:2px;">${c.type}</div>` : ''}
+            </div>
+            ${c.number ? `<a href="tel:${c.number.replace(/\D/g,'')}" style="font-size:15px;font-weight:600;color:#2563eb;text-decoration:none;">${c.number}</a>` : ''}
+          </div>`).join('');
+      })
+      .catch(() => { list.innerHTML = '<div style="color:#e74c3c;font-size:14px;">Failed to load contacts.</div>'; });
   }
 
   // ── Artist List ──
