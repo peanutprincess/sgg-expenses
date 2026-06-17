@@ -920,7 +920,7 @@
         </div>
       </div>
 
-      <div class="field"><label>Signed By</label><input type="text" id="cr-signed-by" placeholder="Name" autocomplete="off"></div>
+      <div class="field"><label>Signed By</label><select id="cr-signed-by"><option value="">— Select —</option></select></div>
       <div class="field"><label>Signature Date</label><input type="date" id="cr-sig-date"></div>
 
       <div id="cr-error" class="error-msg" style="display:none;margin-bottom:12px;"></div>
@@ -1750,6 +1750,18 @@
     const v = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
     document.getElementById('cr-date').value    = v;
     document.getElementById('cr-sig-date').value = v;
+
+    // Load signatures dropdown
+    fetch(SCRIPT_URL + '?action=signatures&t=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        const sel = document.getElementById('cr-signed-by');
+        (d.signatures || []).forEach(function(name) {
+          const opt = document.createElement('option');
+          opt.value = name; opt.textContent = name;
+          sel.appendChild(opt);
+        });
+      }).catch(function(){});
 
     // Diagram tap handler
     var wrap = document.getElementById('cr-diagram-wrap');
