@@ -1296,10 +1296,10 @@ function saveBOL(data) {
     const fileUrl   = 'https://drive.google.com/file/d/' + upload.id + '/view';
     setPublicRead(token, upload.id);
 
-    const sheet = getGlobalDataSheet(BOL_SHEET, ['Date','BOL #','Artist','Artwork','Carrier','Origin','Destination','Pieces','Notes','File']);
+    const sheet = getGlobalDataSheet(BOL_SHEET, ['BOL #','Date','Artist','Artwork','Carrier','Origin','Destination','Pieces','Notes','File']);
     sheet.appendRow([
-      data.date        || '',
       data.bol_number  || '',
+      data.date        || '',
       data.artist      || '',
       data.artwork     || '',
       data.carrier     || '',
