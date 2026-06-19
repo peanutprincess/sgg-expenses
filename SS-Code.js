@@ -134,6 +134,7 @@ function doPost(e) {
                    data.type === 'contractors-update' ? submitContractorsUpdate(data)   :
                    data.type === 'parse_bol'          ? parseBOL(data)                  :
                    data.type === 'save_bol'           ? saveBOL(data)                   :
+                   data.type === 'ic-update'          ? submitICUpdate(data)             :
                    submitExpense(data);
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -1067,6 +1068,23 @@ function submitSignaturesUpdate(data) {
     return { success: true, count: names.length };
   } catch(err) {
     logToSheet('SIGNATURES ERR: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
+function submitICUpdate(data) {
+  try {
+    const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheets().find(s => s.getSheetId() === 49023683);
+    if (!sheet) return { success: false, error: 'IC sheet not found' };
+    sheet.clearContents();
+    sheet.appendRow(['Name', 'Type', 'Number']);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#f3f3f3');
+    sheet.setFrozenRows(1);
+    const contacts = data.contacts || [];
+    contacts.forEach(c => sheet.appendRow([c.name || '', c.type || '', c.number || '']));
+    return { success: true, count: contacts.length };
+  } catch(err) {
     return { success: false, error: err.toString() };
   }
 }
